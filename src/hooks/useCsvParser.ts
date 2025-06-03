@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { ComparisonRow, SuggestionData } from '@/types/suggestion';
+import { ComparisonRow, SuggestionData, ComparisonOutput } from '@/types/suggestion';
 
 export function useCsvParser() {
   const [isLoading, setIsLoading] = useState(false);
@@ -853,11 +853,18 @@ export function useCsvParser() {
       const headers = rows[0].map(h => h.trim());
       console.log('📝 Headers found:', headers);
 
-      const requiredHeaders = ['id', 'inputs', 'outputs'];
+      const requiredHeaders = ['id', 'inputs'];
       const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
       if (missingHeaders.length > 0) {
         throw new Error(`Missing required headers: ${missingHeaders.join(', ')}`);
       }
+
+      // Identificar colunas de output dos modelos
+      const modelOutputColumns = headers.filter(h => h.endsWith('_outputs') && h !== 'reference_outputs');
+      if (modelOutputColumns.length === 0) {
+        throw new Error('No model output columns found. Ensure CSV has columns ending with \'_outputs\'.');
+      }
+      console.log('🤖 Model output columns identified:', modelOutputColumns);
 
       const comparisonRows: ComparisonRow[] = [];
       const skippedRows: number[] = [];
@@ -937,103 +944,109 @@ export function useCsvParser() {
             };
           }
 
-          // Parse outputs with detailed debug
-          try {
-            console.log(`🔍 Trying to parse outputs in line ${i}`);
-            outputs = debugJsonParsing(row.outputs, `outputs line ${i}`);
-            console.log('✅ Outputs parsed successfully:', typeof outputs, Object.keys(outputs || {}));
-          } catch (e) {
-            const errorMsg = `Error in JSON of outputs: ${(e as Error).message}`;
-            console.warn(`⚠️ Line ${i + 1} - Error in outputs parse, creating fallback: ${errorMsg}`);
-            
-            // Instead of skipping the line, create a fallback structure for outputs
-            outputs = {
-              fallback: true,
-              errorMessage: errorMsg,
-              originalData: row.outputs
-            };
-          }
-          
-          // Prepare the main output with better handling
-          let outputForComparison;
-          
-          try {
-            console.log(`🔧 Analyzing outputs structure in line ${i}:`, {
-              tipo: typeof outputs,
-              ehString: typeof outputs === 'string',
-              ehObjeto: typeof outputs === 'object',
-              ehArray: Array.isArray(outputs),
-              temCampoOutput: outputs && typeof outputs === 'object' && 'output' in outputs,
-              temCodeSuggestions: outputs && typeof outputs === 'object' && 'codeSuggestions' in outputs,
-              keys: outputs && typeof outputs === 'object' ? Object.keys(outputs) : 'N/A'
-            });
+          // Processar as colunas de output dos modelos dinamicamente
+          let mainOutput: ComparisonOutput | undefined = undefined;
+          const alternativeOutputsProcessed: ComparisonOutput[] = [];
 
-            // If outputs is a string, it's probably direct JSON
-            if (typeof outputs === 'string') {
-              console.log('📝 Outputs is string, trying parse...');
-              const parsedSuggestion = parseJsonSafely(outputs);
-              outputForComparison = {
-                output: outputs,
-                parsed: parsedSuggestion,
-                label: 'Modelo B'
+          modelOutputColumns.forEach((colName, index) => {
+            const modelRawOutput = row[colName];
+            const modelLabel = colName.replace(/_outputs$/, ''); // Derivar label do nome da coluna
+
+            if (modelRawOutput && modelRawOutput.trim()) {
+              try {
+                console.log(`🔍 Trying to parse output for model "${modelLabel}" (column: ${colName}) in line ${i}`);
+                const parsedModelData = debugJsonParsing(modelRawOutput, `${colName} line ${i}`);
+                console.log(`✅ Output for model "${modelLabel}" parsed successfully:`, typeof parsedModelData);
+
+                let outputForComparisonModel: ComparisonOutput;
+
+                if (typeof parsedModelData === 'string') {
+                  const parsedSuggestion = parseJsonSafely(parsedModelData);
+                  outputForComparisonModel = {
+                    output: parsedModelData,
+                    parsed: parsedSuggestion,
+                    label: modelLabel
+                  };
+                } else if (parsedModelData && typeof parsedModelData === 'object' && parsedModelData.output) { // Estrutura com campo 'output'
+                  const parsedSuggestion = parseJsonSafely(parsedModelData.output);
+                  outputForComparisonModel = {
+                    output: parsedModelData.output,
+                    parsed: parsedSuggestion,
+                    label: parsedModelData.label || modelLabel
+                  };
+                } else if (parsedModelData && typeof parsedModelData === 'object' && parsedModelData.codeSuggestions) { // Já é uma estrutura SuggestionData
+                  outputForComparisonModel = {
+                    output: JSON.stringify(parsedModelData, null, 2),
+                    parsed: parsedModelData,
+                    label: modelLabel
+                  };
+                } else { // Fallback
+                  outputForComparisonModel = {
+                    output: typeof parsedModelData === 'string' ? parsedModelData : JSON.stringify(parsedModelData, null, 2),
+                    parsed: undefined,
+                    label: modelLabel
+                  };
+                }
+                
+                if (index === 0) {
+                  mainOutput = outputForComparisonModel;
+                } else {
+                  alternativeOutputsProcessed.push(outputForComparisonModel);
+                }
+
+              } catch (e) {
+                const errorMsg = `Error in JSON of ${colName}: ${(e as Error).message}`;
+                console.warn(`⚠️ Line ${i + 1} - Error in ${colName} parse, creating fallback: ${errorMsg}`);
+                const fallbackOutput: ComparisonOutput = {
+                  output: modelRawOutput || 'Data unavailable',
+                  parsed: {
+                    overallSummary: `Error processing ${colName} for line ${i + 1}: ${errorMsg}`,
+                    codeSuggestions: []
+                  },
+                  label: `${modelLabel} (with parse error)`
+                };
+                if (index === 0) {
+                  mainOutput = fallbackOutput;
+                } else {
+                  alternativeOutputsProcessed.push(fallbackOutput);
+                }
+              }
+            } else {
+              // Se a coluna estiver vazia ou contiver apenas espaços em branco
+              const emptyOutput: ComparisonOutput = {
+                output: '',
+                parsed: { overallSummary: 'No output provided', codeSuggestions: [] },
+                label: `${modelLabel} (empty)`
               };
-            } 
-            // If outputs has 'output' field (more complex structure)
-            else if (outputs && typeof outputs === 'object' && outputs.output) {
-              console.log('🔧 Outputs has output field, trying parse...');
-              console.log('🔍 Type of output field:', typeof outputs.output);
-              console.log('🔍 Output sample:', typeof outputs.output === 'string' ? outputs.output.substring(0, 150) + '...' : outputs.output);
-              
-              // HERE IS THE CRITICAL POINT: if output is a string JSON escaped, we need to parse it
-              const parsedSuggestion = parseJsonSafely(outputs.output);
-              console.log('🎯 Result of output parse:', parsedSuggestion ? (parsedSuggestion.codeSuggestions ? `✅ ${parsedSuggestion.codeSuggestions.length} codeSuggestions found` : '⚠️ No codeSuggestions') : '❌ Parse failed');
-              
-              outputForComparison = {
-                output: outputs.output,
-                parsed: parsedSuggestion,
-                label: outputs.label || 'Modelo B'
-              };
-            } 
-            // If outputs is already the parsed object (rare but possible)
-            else if (outputs && typeof outputs === 'object' && outputs.codeSuggestions) {
-              console.log('📚 Outputs already looks like parsed suggestion structure');
-              outputForComparison = {
-                output: JSON.stringify(outputs, null, 2),
-                parsed: outputs,
-                label: 'Modelo B'
-              };
+              if (index === 0) {
+                mainOutput = emptyOutput;
+              } else {
+                alternativeOutputsProcessed.push(emptyOutput);
+              }
             }
-            // Default case
-            else {
-              console.log('🎯 Outputs structure not recognized, using as JSON');
-              console.log('🎯 Outputs data:', outputs);
-              outputForComparison = {
-                output: typeof outputs === 'string' ? outputs : JSON.stringify(outputs, null, 2),
-                parsed: undefined,
-                label: 'Modelo B'
-              };
-            }
-          } catch (e) {
-            const errorMsg = `Error in outputs structure: ${(e as Error).message}`;
-            console.warn(`⚠️ Line ${i + 1} - Error in outputs parse, creating fallback: ${errorMsg}`);
-            
-            // Instead of skipping the line, create a fallback
-            outputForComparison = {
-              output: JSON.stringify(outputs, null, 2),
-              parsed: {
-                overallSummary: `Error processing line ${i + 1}: ${errorMsg}`,
-                codeSuggestions: []
-              },
-              label: 'Modelo B (with error)'
-            };
-          }
+          });
           
+          if (!mainOutput) {
+            // Isso não deve acontecer se modelOutputColumns não estiver vazio, mas é uma salvaguarda
+             console.warn(`⚠️ Line ${i + 1} - No main output could be processed. CSV might be malformed for model outputs.`);
+             // Criar um fallback para mainOutput para evitar quebrar a estrutura ComparisonRow
+             mainOutput = {
+                output: 'Error: No main model output found',
+                parsed: { overallSummary: 'Error: No main model output found in CSV line', codeSuggestions: [] },
+                label: 'Error Model'
+             };
+          }
+
           const comparisonRow: ComparisonRow = {
             id: row.id,
             inputs,
-            outputs: outputForComparison
+            outputs: mainOutput, // A primeira coluna _outputs vai aqui
           };
 
+          if (alternativeOutputsProcessed.length > 0) {
+            comparisonRow.alternativeOutputs = alternativeOutputsProcessed;
+          }
+          
           // Parse reference_outputs if exists - with improved debug
           if (row.reference_outputs && row.reference_outputs.trim()) {
             try {
@@ -1105,39 +1118,6 @@ export function useCsvParser() {
                 label: 'Reference (with parse error)'
               };
             }
-          }
-
-          // Support for alternative outputs (for A/B/C tests)
-          const alternativeKeys = headers.filter(h => h.startsWith('alternative_output_'));
-          if (alternativeKeys.length > 0) {
-            comparisonRow.alternativeOutputs = [];
-            alternativeKeys.forEach(key => {
-              if (row[key] && row[key].trim()) {
-                try {
-                  const altOutput = debugJsonParsing(row[key], `${key} line ${i}`);
-                  const label = key.replace('alternative_output_', '').replace('_', ' ');
-                  comparisonRow.alternativeOutputs!.push({
-                    output: typeof altOutput === 'string' ? altOutput : JSON.stringify(altOutput, null, 2),
-                    parsed: typeof altOutput === 'string' ? parseJsonSafely(altOutput) : 
-                           (altOutput.output ? parseJsonSafely(altOutput.output) : altOutput),
-                    label: altOutput.label || label || 'Alternative'
-                  });
-                } catch (e) {
-                  console.warn(`⚠️ Error making parse of ${key} in line ${i + 1} - creating fallback:`, e);
-                  
-                  // Instead of ignoring, create a fallback
-                  const label = key.replace('alternative_output_', '').replace('_', ' ');
-                  comparisonRow.alternativeOutputs!.push({
-                    output: row[key] || 'Data unavailable',
-                    parsed: {
-                      overallSummary: `Error processing ${key} of line ${i + 1}: ${(e as Error).message}`,
-                      codeSuggestions: []
-                    },
-                    label: `${label} (with error)`
-                  });
-                }
-              }
-            });
           }
 
           comparisonRows.push(comparisonRow);
