@@ -8,6 +8,7 @@ export interface CodeSuggestion {
   relevantLinesStart: number;
   relevantLinesEnd: number;
   label: string;
+  severity?: 'critical' | 'error' | 'warning' | 'info' | 'suggestion';
 }
 
 export interface SuggestionData {
@@ -47,8 +48,8 @@ export interface ComparisonRow {
 
 export interface ComparisonResult {
   rowId: string;
-  winnerId: string; // qual output ganhou
-  winnerLabel: string;
+  winnerId: string; // qual output ganhou ('tie' para empate, 'undefined' para não definido)
+  winnerLabel: string; // nome amigável do vencedor
   confidence: number; // 1-5 quão confiante está na escolha
   reasoning: string; // por que escolheu esse
   timestamp: string;

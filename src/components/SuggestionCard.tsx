@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { CodeSuggestion, SuggestionFeedback } from '@/types/suggestion';
 import CodeDiff from './CodeDiff';
-import { ThumbsUp, ThumbsDown, FileText, Tag } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, FileText, Tag, AlertCircle, CheckCircle2, Info } from 'lucide-react';
 import clsx from 'clsx';
 
 interface SuggestionCardProps {
@@ -33,16 +33,78 @@ export default function SuggestionCard({
     onFeedback(feedback);
   };
 
-  const getLabelColor = (label: string) => {
-    const colors: { [key: string]: string } = {
-      'refactoring': 'bg-blue-100 text-blue-800',
-      'bug-fix': 'bg-red-100 text-red-800',
-      'performance': 'bg-yellow-100 text-yellow-800',
-      'security': 'bg-purple-100 text-purple-800',
-      'style': 'bg-green-100 text-green-800',
-      'default': 'bg-gray-100 text-gray-800'
+  const getSeverityIcon = (severity?: string) => {
+    switch (severity?.toLowerCase()) {
+      case 'error':
+      case 'critical':
+        return <AlertCircle className="w-3 h-3 text-red-500" />;
+      case 'warning':
+        return <AlertCircle className="w-3 h-3 text-yellow-500" />;
+      case 'info':
+        return <Info className="w-3 h-3 text-blue-500" />;
+      default:
+        return <CheckCircle2 className="w-3 h-3 text-green-500" />;
+    }
+  };
+
+  const getSeverityBadgeClasses = (severity?: string) => {
+    switch (severity?.toLowerCase()) {
+      case 'error':
+      case 'critical':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'warning':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'info':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-green-100 text-green-800 border-green-200';
+    }
+  };
+
+  const inferSeverityFromLabel = (label?: string): string => {
+    if (!label) return 'suggestion';
+    
+    const lowerLabel = label.toLowerCase();
+    
+    // Mapear labels comuns para severidade
+    if (lowerLabel.includes('critical') || lowerLabel.includes('security') || lowerLabel.includes('vulnerability') || lowerLabel.includes('exploit')) {
+      return 'critical';
+    }
+    if (lowerLabel.includes('error') || lowerLabel.includes('bug') || lowerLabel.includes('fix') || lowerLabel.includes('crash') || lowerLabel.includes('fail')) {
+      return 'error';
+    }
+    if (lowerLabel.includes('warning') || lowerLabel.includes('deprecated') || lowerLabel.includes('performance') || lowerLabel.includes('slow') || lowerLabel.includes('memory')) {
+      return 'warning';
+    }
+    if (lowerLabel.includes('info') || lowerLabel.includes('documentation') || lowerLabel.includes('comment') || lowerLabel.includes('style') || lowerLabel.includes('format')) {
+      return 'info';
+    }
+    
+    // Labels específicos comuns no contexto de code review
+    const severityMap: { [key: string]: string } = {
+      'refactoring': 'info',
+      'optimization': 'warning',
+      'maintainability': 'info',
+      'readability': 'info',
+      'code_smell': 'warning',
+      'best_practices': 'info',
+      'naming': 'info',
+      'duplication': 'warning',
+      'complexity': 'warning',
+      'type_safety': 'error',
+      'null_pointer': 'error',
+      'resource_leak': 'critical',
+      'injection': 'critical',
+      'xss': 'critical'
     };
-    return colors[label] || colors.default;
+    
+    for (const [key, severity] of Object.entries(severityMap)) {
+      if (lowerLabel.includes(key)) {
+        return severity;
+      }
+    }
+    
+    return 'suggestion'; // default
   };
 
   return (
@@ -54,13 +116,16 @@ export default function SuggestionCard({
             <span className="text-sm font-medium text-gray-500">
               Sugestão {index + 1} de {total}
             </span>
-            <span className={clsx(
-              'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
-              getLabelColor(suggestion.label)
-            )}>
-              <Tag className="w-3 h-3 mr-1" />
-              {suggestion.label}
-            </span>
+            {suggestion.label && (() => {
+              const severity = suggestion.severity || inferSeverityFromLabel(suggestion.label);
+              console.log(`🎯 SuggestionCard - label: "${suggestion.label}", severidade: "${severity}"`);
+              return (
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSeverityBadgeClasses(severity)}`}>
+                  {getSeverityIcon(severity)}
+                  <span className="ml-1">{suggestion.label}</span>
+                </span>
+              );
+            })()}
           </div>
           <div className="flex items-center space-x-2 text-sm text-gray-500">
             <FileText className="w-4 h-4" />

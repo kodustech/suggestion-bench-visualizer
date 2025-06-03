@@ -108,31 +108,31 @@ export default function CodeBlock({
   const getLineClasses = (type: string) => {
     switch (type) {
       case 'added':
-        return 'bg-green-50 border-l-4 border-green-400 text-green-900';
+        return 'bg-green-50 border-l-4 border-green-400';
       case 'removed':
-        return 'bg-red-50 border-l-4 border-red-400 text-red-900';
+        return 'bg-red-50 border-l-4 border-red-400';
       case 'unchanged':
-        return 'bg-gray-50';
+        return 'bg-white';
       default:
-        return 'hover:bg-gray-50';
+        return 'bg-white hover:bg-gray-50';
     }
   };
 
   const getLineNumberClasses = (type: string) => {
     switch (type) {
       case 'added':
-        return 'bg-green-100 text-green-700 border-green-200';
+        return 'bg-green-100 text-green-800 border-green-200';
       case 'removed':
-        return 'bg-red-100 text-red-700 border-red-200';
+        return 'bg-red-100 text-red-800 border-red-200';
       case 'unchanged':
-        return 'bg-gray-100 text-gray-600 border-gray-200';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
       default:
-        return 'bg-gray-50 text-gray-500 border-gray-200';
+        return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
   return (
-    <div className={clsx('border border-gray-200 rounded-lg overflow-hidden bg-white', className)}>
+    <div className={clsx('border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm', className)}>
       {/* Header */}
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
@@ -210,15 +210,15 @@ export default function CodeBlock({
                 <tr key={index} className={getLineClasses(line.type)}>
                   {showLineNumbers && (
                     <td className={clsx(
-                      'px-3 py-1 text-xs font-mono select-none border-r border-dashed w-16 text-right',
+                      'px-3 py-1 text-sm font-mono select-none border-r border-dashed w-16 text-right font-medium',
                       getLineNumberClasses(line.type)
                     )}>
                       {line.number}
                     </td>
                   )}
                   <td className="px-4 py-1">
-                    <pre className="text-sm font-mono whitespace-pre-wrap break-words">
-                      <code>{line.content || ' '}</code>
+                    <pre className="text-base font-mono whitespace-pre-wrap break-words text-gray-900 leading-relaxed">
+                      <code className="text-gray-900">{line.content || ' '}</code>
                     </pre>
                   </td>
                 </tr>

@@ -8,7 +8,7 @@ import ComparisonView from '@/components/ComparisonView';
 import ComparisonStatsComponent from '@/components/ComparisonStats';
 import FileUpload from '@/components/FileUpload';
 import { useCsvParser } from '@/hooks/useCsvParser';
-import { Upload, Download, AlertCircle, CheckCircle, GitCompare, FileText, BarChart3, Type, FileUp } from 'lucide-react';
+import { Upload, Download, AlertCircle, CheckCircle, GitCompare, FileText, BarChart3, Type, FileUp, RefreshCw, Trash2 } from 'lucide-react';
 
 type AppMode = 'input' | 'suggestions' | 'comparison';
 
@@ -29,6 +29,10 @@ export default function Home() {
   const [comparisonRows, setComparisonRows] = useState<ComparisonRow[]>([]);
   const [currentComparisonIndex, setCurrentComparisonIndex] = useState(0);
   const [comparisonResults, setComparisonResults] = useState<{ [key: string]: ComparisonResult }>({});
+  const [modelLabels, setModelLabels] = useState<{ [key: string]: string }>({});
+  
+  // Key para localStorage baseada no hash dos dados
+  const [storageKey, setStorageKey] = useState<string>('');
   
   const [error, setError] = useState('');
   const [isDataValid, setIsDataValid] = useState(false);
@@ -36,6 +40,60 @@ export default function Home() {
 
   const { parseCsv, isLoading: csvLoading, error: csvError } = useCsvParser();
   const [csvWarning, setCsvWarning] = useState<string>('');
+
+  // Funções para localStorage
+  const generateStorageKey = (data: string): string => {
+    // Simples hash para identificar únicamente o dataset
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return `suggestion-visualizer-${Math.abs(hash)}`;
+  };
+
+  const saveToLocalStorage = (key: string, results: { [key: string]: ComparisonResult }, labels: { [key: string]: string } = {}) => {
+    try {
+      const dataToSave = {
+        results,
+        labels,
+        timestamp: new Date().toISOString(),
+        version: '1.1'
+      };
+      localStorage.setItem(key, JSON.stringify(dataToSave));
+      console.log('💾 Dados salvos no localStorage com key:', key);
+    } catch (error) {
+      console.error('❌ Erro ao salvar no localStorage:', error);
+    }
+  };
+
+  const loadFromLocalStorage = (key: string): { results: { [key: string]: ComparisonResult }, labels: { [key: string]: string } } => {
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const data = JSON.parse(saved);
+        console.log('📥 Dados carregados do localStorage:', Object.keys(data.results || {}).length, 'resultados');
+        console.log('📥 Labels carregados do localStorage:', Object.keys(data.labels || {}).length, 'labels');
+        return {
+          results: data.results || {},
+          labels: data.labels || {}
+        };
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar do localStorage:', error);
+    }
+    return { results: {}, labels: {} };
+  };
+
+  const clearLocalStorage = (key: string) => {
+    try {
+      localStorage.removeItem(key);
+      console.log('🗑️ Dados removidos do localStorage');
+    } catch (error) {
+      console.error('❌ Erro ao limpar localStorage:', error);
+    }
+  };
 
   // Todas as sugestões em lista plana (modo sugestões)
   const allSuggestions = suggestions.flatMap(data => 
@@ -72,8 +130,17 @@ export default function Home() {
           setMode('comparison');
           setCurrentComparisonIndex(0);
           
+          // Gerar key para localStorage e tentar carregar dados salvos
+          const key = generateStorageKey(csvInput);
+          setStorageKey(key);
+          const savedData = loadFromLocalStorage(key);
+          if (Object.keys(savedData.results).length > 0) {
+            setComparisonResults(savedData.results);
+            setModelLabels(savedData.labels);
+            console.log('✅ Resultados anteriores carregados do localStorage');
+          }
+          
           // Verificar se houve avisos no console sobre linhas puladas
-          // Buscar por logs de linhas puladas e mostrar feedback
           const totalCsvLines = csvInput.trim().split('\n').length - 1; // -1 pelo header
           if (rows.length < totalCsvLines) {
             const skippedCount = totalCsvLines - rows.length;
@@ -95,6 +162,13 @@ export default function Home() {
       }
     }
   }, [jsonInput, csvInput, inputType, mode, parseCsv]);
+
+  // Salvar automaticamente quando resultados ou labels mudam
+  useEffect(() => {
+    if (storageKey && (Object.keys(comparisonResults).length > 0 || Object.keys(modelLabels).length > 0)) {
+      saveToLocalStorage(storageKey, comparisonResults, modelLabels);
+    }
+  }, [comparisonResults, modelLabels, storageKey]);
 
   // Calcular estatísticas das comparações
   const getComparisonStats = (): ComparisonStats => {
@@ -120,12 +194,18 @@ export default function Home() {
       });
     });
 
-    // Contar vitórias
+    // Contar vitórias (excluir empates e não definidos das contagens de modelos)
     results.forEach(result => {
-      modelPerformance[result.winnerLabel].wins++;
-      Object.keys(modelPerformance).forEach(label => {
-        modelPerformance[label].total++;
-      });
+      if (result.winnerId !== 'tie' && result.winnerId !== 'undefined' && modelPerformance[result.winnerLabel]) {
+        modelPerformance[result.winnerLabel].wins++;
+      }
+      
+      // Apenas contar como total para modelos reais (não empates/não definidos)
+      if (result.winnerId !== 'tie' && result.winnerId !== 'undefined') {
+        Object.keys(modelPerformance).forEach(label => {
+          modelPerformance[label].total++;
+        });
+      }
     });
 
     const totalConfidence = results.reduce((sum, result) => sum + result.confidence, 0);
@@ -159,6 +239,16 @@ export default function Home() {
 
   const handleComparisonNavigate = (index: number) => {
     setCurrentComparisonIndex(index);
+  };
+
+  const handleLabelChange = (comparisonId: string, optionId: string, newLabel: string) => {
+    // Usar apenas o optionId como chave global (ex: "main", "reference", "alt_0")
+    // Isso faz com que o label se aplique a todos os arquivos/comparações
+    setModelLabels(prev => ({
+      ...prev,
+      [optionId]: newLabel
+    }));
+    console.log(`🏷️ Label global do modelo ${optionId} alterado para: ${newLabel}`);
   };
 
   const exportResults = () => {
@@ -223,6 +313,39 @@ export default function Home() {
             "relevantLinesStart": 340,
             "relevantLinesEnd": 380,
             "label": "refactoring"
+        },
+        {
+            "relevantFile": "src/tools/midaz-setup.js",
+            "language": "javascript",
+            "suggestionContent": "Potencial vazamento de memória detectado: a variável 'config' não está sendo limpa após o uso, podendo causar acúmulo de memória em operações repetidas.",
+            "existingCode": "let config = loadConfig();\\n// uso da config...\\n// sem limpeza",
+            "improvedCode": "let config = loadConfig();\\n// uso da config...\\nconfig = null; // limpeza explícita",
+            "oneSentenceSummary": "Prevenir vazamento de memória limpando explicitamente a variável config.",
+            "relevantLinesStart": 45,
+            "relevantLinesEnd": 50,
+            "label": "memory_leak"
+        },
+        {
+            "relevantFile": "src/tools/midaz-setup.js", 
+            "language": "javascript",
+            "suggestionContent": "Função está usando sintaxe deprecated que será removida na próxima versão. Recomenda-se migrar para a nova API.",
+            "existingCode": "app.use(bodyParser.json());",
+            "improvedCode": "app.use(express.json());",
+            "oneSentenceSummary": "Migrar de bodyParser deprecated para express.json().",
+            "relevantLinesStart": 12,
+            "relevantLinesEnd": 12,
+            "label": "deprecated_warning"  
+        },
+        {
+            "relevantFile": "src/auth/login.js",
+            "language": "javascript", 
+            "suggestionContent": "VULNERABILIDADE CRÍTICA: SQL Injection detectada! A query está concatenando input do usuário diretamente sem sanitização, permitindo ataques maliciosos.",
+            "existingCode": "const query = \`SELECT * FROM users WHERE username = '\${username}' AND password = '\${password}'\`;",
+            "improvedCode": "const query = 'SELECT * FROM users WHERE username = ? AND password = ?'; const result = await db.query(query, [username, hashedPassword]);",
+            "oneSentenceSummary": "Corrigir vulnerabilidade crítica de SQL Injection usando prepared statements.",
+            "relevantLinesStart": 23,
+            "relevantLinesEnd": 23,
+            "label": "security_vulnerability"
         }
     ]
 }]`;
@@ -269,12 +392,18 @@ export default function Home() {
   };
 
   const resetApp = () => {
+    // Limpar localStorage se houver
+    if (storageKey) {
+      clearLocalStorage(storageKey);
+    }
+    
     setSuggestions([]);
     setComparisonRows([]);
     setJsonInput('');
     setCsvInput('');
     setFeedbacks({});
     setComparisonResults({});
+    setModelLabels({});
     setCurrentItemIndex(0);
     setCurrentComparisonIndex(0);
     setMode('input');
@@ -282,6 +411,30 @@ export default function Home() {
     setInputMethod('upload');
     setUploadedFileName('');
     setCsvWarning('');
+    setStorageKey('');
+  };
+
+  const resetEvaluations = () => {
+    const confirmMessage = mode === 'suggestions' 
+      ? `Tem certeza que deseja limpar todos os ${feedbackCount} feedbacks? Esta ação não pode ser desfeita.`
+      : `Tem certeza que deseja limpar todas as ${comparisonResultCount} avaliações? Esta ação não pode ser desfeita.`;
+    
+    if (window.confirm(confirmMessage)) {
+      // Limpar localStorage
+      if (storageKey) {
+        clearLocalStorage(storageKey);
+      }
+      
+      // Limpar estado
+      if (mode === 'suggestions') {
+        setFeedbacks({});
+      } else if (mode === 'comparison') {
+        setComparisonResults({});
+        setModelLabels({});
+      }
+      
+      console.log('🗑️ Avaliações limpas pelo usuário');
+    }
   };
 
   if (mode === 'input') {
@@ -564,8 +717,17 @@ export default function Home() {
                 <h2 className="text-xl font-semibold text-gray-900">
                   Comparação A/B de Modelos
                 </h2>
-                <div className="text-sm text-gray-500">
-                  {comparisonResultCount} de {comparisonRows.length} avaliadas
+                <div className="flex items-center space-x-4">
+                  <div className="text-sm text-gray-500">
+                    {comparisonResultCount} de {comparisonRows.length} avaliadas
+                  </div>
+                  
+                  {storageKey && comparisonResultCount > 0 && (
+                    <div className="flex items-center space-x-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-md">
+                      <span>💾</span>
+                      <span>Auto-salvamento: {comparisonResultCount} resultados</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -576,6 +738,24 @@ export default function Home() {
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   {showStats ? 'Ocultar' : 'Ver'} Estatísticas
+                </button>
+
+                <button
+                  onClick={resetEvaluations}
+                  className="inline-flex items-center px-3 py-1.5 bg-yellow-100 text-yellow-700 text-sm font-medium rounded-md hover:bg-yellow-200 transition-colors"
+                  title="Limpar todas as avaliações (mantém os dados)"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Limpar Avaliações
+                </button>
+
+                <button
+                  onClick={resetApp}
+                  className="inline-flex items-center px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-md hover:bg-red-200 transition-colors"
+                  title="Resetar tudo e voltar ao início"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Reset Completo
                 </button>
 
                 <div className="flex items-center space-x-2">
@@ -632,6 +812,8 @@ export default function Home() {
                   total={comparisonRows.length}
                   onResult={handleComparisonResult}
                   existingResult={comparisonResults[currentComparison.id]}
+                  onLabelChange={handleLabelChange}
+                  savedLabels={modelLabels}
                 />
               )}
             </div>

@@ -31,8 +31,17 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
     return distribution;
   };
 
+  const getSpecialResults = () => {
+    const ties = results.filter(r => r.winnerId === 'tie').length;
+    const undefined = results.filter(r => r.winnerId === 'undefined').length;
+    const decided = results.filter(r => r.winnerId !== 'tie' && r.winnerId !== 'undefined').length;
+    
+    return { ties, undefined, decided };
+  };
+
   const modelRanking = getModelRanking();
   const confidenceDistribution = getConfidenceDistribution();
+  const specialResults = getSpecialResults();
 
   const getMedalColor = (index: number) => {
     if (index === 0) return 'text-yellow-500'; // Ouro
@@ -125,11 +134,57 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
         </div>
       </div>
 
+      {/* Tipos de Resultado */}
+      {stats.completedComparisons > 0 && (
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Tipos de Resultado
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-900">
+                  {specialResults.decided}
+                </div>
+                <div className="text-sm text-green-700">Decisões claras</div>
+                <div className="text-xs text-green-600 mt-1">
+                  {((specialResults.decided / stats.completedComparisons) * 100).toFixed(1)}%
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-900">
+                  {specialResults.ties}
+                </div>
+                <div className="text-sm text-yellow-700">Empates</div>
+                <div className="text-xs text-yellow-600 mt-1">
+                  {((specialResults.ties / stats.completedComparisons) * 100).toFixed(1)}%
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-900">
+                  {specialResults.undefined}
+                </div>
+                <div className="text-sm text-gray-700">Não definidos</div>
+                <div className="text-xs text-gray-600 mt-1">
+                  {((specialResults.undefined / stats.completedComparisons) * 100).toFixed(1)}%
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Ranking dos Modelos */}
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Ranking dos Modelos
+            Ranking dos Modelos (apenas decisões claras)
           </h3>
           <div className="space-y-3">
             {modelRanking.map((model, index) => (
@@ -226,9 +281,17 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
         <div className="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-2">Insights:</h4>
           <ul className="text-sm text-blue-800 space-y-1">
-            <li>• O modelo mais performático é <strong>{modelRanking[0]?.label}</strong> com {modelRanking[0]?.winRate.toFixed(1)}% de vitórias</li>
+            {modelRanking[0] && (
+              <li>• O modelo mais performático é <strong>{modelRanking[0].label}</strong> com {modelRanking[0].winRate.toFixed(1)}% de vitórias (considerando apenas decisões claras)</li>
+            )}
             <li>• Confiança média nas decisões é {stats.averageConfidence >= 4 ? 'alta' : stats.averageConfidence >= 3 ? 'média' : 'baixa'} ({stats.averageConfidence.toFixed(1)}/5)</li>
             <li>• {Math.round(completionPercentage)}% das comparações foram concluídas</li>
+            {specialResults.ties > 0 && (
+              <li>• {specialResults.ties} comparações resultaram em empate ({((specialResults.ties / stats.completedComparisons) * 100).toFixed(1)}%)</li>
+            )}
+            {specialResults.undefined > 0 && (
+              <li>• {specialResults.undefined} comparações ficaram como "não definido" ({((specialResults.undefined / stats.completedComparisons) * 100).toFixed(1)}%)</li>
+            )}
           </ul>
         </div>
       )}

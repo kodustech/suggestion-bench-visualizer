@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ComparisonRow, ComparisonOutput, ComparisonResult, SuggestionData } from '@/types/suggestion';
 import GitHubStyleSuggestion from './GitHubStyleSuggestion';
-import { Crown, Star, FileText, GitPullRequest, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Crown, Star, FileText, GitPullRequest, ChevronRight, AlertTriangle, Edit2, Check, X } from 'lucide-react';
 import clsx from 'clsx';
 
 interface ComparisonViewProps {
@@ -12,6 +12,8 @@ interface ComparisonViewProps {
   total: number;
   onResult: (result: ComparisonResult) => void;
   existingResult?: ComparisonResult;
+  onLabelChange?: (comparisonId: string, optionId: string, newLabel: string) => void;
+  savedLabels?: { [key: string]: string }; // chave: optionId global, valor: label
 }
 
 export default function ComparisonView({
@@ -19,33 +21,68 @@ export default function ComparisonView({
   index,
   total,
   onResult,
-  existingResult
+  existingResult,
+  onLabelChange,
+  savedLabels = {}
 }: ComparisonViewProps) {
   const [selectedWinner, setSelectedWinner] = useState<string>(existingResult?.winnerId || '');
   const [confidence, setConfidence] = useState<number>(existingResult?.confidence || 3);
   const [reasoning, setReasoning] = useState<string>(existingResult?.reasoning || '');
   const [showReasoningInput, setShowReasoningInput] = useState<boolean>(false);
+  const [currentComparisonId, setCurrentComparisonId] = useState<string>(comparisonRow.id);
+  const [editingLabel, setEditingLabel] = useState<string | null>(null);
+  const [tempLabel, setTempLabel] = useState<string>('');
+
+  // Limpar decisão quando muda de comparação
+  useEffect(() => {
+    // Verificar se realmente mudou de comparação
+    if (comparisonRow.id !== currentComparisonId) {
+      setCurrentComparisonId(comparisonRow.id);
+      
+      if (existingResult) {
+        // Se há resultado salvo, carregar ele
+        setSelectedWinner(existingResult.winnerId);
+        setConfidence(existingResult.confidence);
+        setReasoning(existingResult.reasoning);
+        setShowReasoningInput(!!existingResult.reasoning.trim());
+        console.log(`✅ Carregando resultado salvo para comparação ${comparisonRow.id}: ${existingResult.winnerLabel}`);
+      } else {
+        // Se não há resultado salvo, limpar tudo
+        setSelectedWinner('');
+        setConfidence(3);
+        setReasoning('');
+        setShowReasoningInput(false);
+        console.log(`🔄 Comparação ${comparisonRow.id} resetada - nenhuma decisão prévia`);
+      }
+    }
+  }, [comparisonRow.id, existingResult, currentComparisonId]); // Reagir quando muda o ID da comparação
 
   // Preparar as opções para comparação
   const comparisonOptions: (ComparisonOutput & { id: string })[] = [];
   
   if (comparisonRow.reference_outputs) {
+    const savedLabel = savedLabels['reference']; // Label global
     comparisonOptions.push({
       ...comparisonRow.reference_outputs,
-      id: 'reference'
+      id: 'reference',
+      label: savedLabel || comparisonRow.reference_outputs.label || 'Modelo A'
     });
   }
   
+  const mainSavedLabel = savedLabels['main']; // Label global
   comparisonOptions.push({
     ...comparisonRow.outputs,
-    id: 'main'
+    id: 'main',
+    label: mainSavedLabel || comparisonRow.outputs.label || 'Modelo B'
   });
 
   if (comparisonRow.alternativeOutputs) {
     comparisonRow.alternativeOutputs.forEach((alt, idx) => {
+      const altSavedLabel = savedLabels[`alt_${idx}`]; // Label global
       comparisonOptions.push({
         ...alt,
-        id: `alt_${idx}`
+        id: `alt_${idx}`,
+        label: altSavedLabel || alt.label || `Modelo ${String.fromCharCode(67 + idx)}` // C, D, E...
       });
     });
   }
@@ -53,16 +90,83 @@ export default function ComparisonView({
   const handleWinnerSelection = (winnerId: string, winnerLabel: string) => {
     setSelectedWinner(winnerId);
     
+    // Obter o label atualizado da opção (caso tenha sido renomeado)
+    const actualLabel = winnerId === 'tie' ? 'Empate' :
+                       winnerId === 'undefined' ? 'Não definido' :
+                       comparisonOptions.find(o => o.id === winnerId)?.label || winnerLabel;
+    
     const result: ComparisonResult = {
       rowId: comparisonRow.id,
       winnerId,
-      winnerLabel,
+      winnerLabel: actualLabel,
       confidence,
       reasoning: reasoning.trim(),
       timestamp: new Date().toISOString()
     };
     
     onResult(result);
+    console.log(`🎯 Resultado selecionado para ${comparisonRow.id}: ${actualLabel}`);
+  };
+
+  const handleConfidenceChange = (newConfidence: number) => {
+    setConfidence(newConfidence);
+    
+    // Se já há um vencedor selecionado, salvar automaticamente
+    if (selectedWinner) {
+      const result: ComparisonResult = {
+        rowId: comparisonRow.id,
+        winnerId: selectedWinner,
+        winnerLabel: selectedWinner === 'tie' ? 'Empate' : 
+                    selectedWinner === 'undefined' ? 'Não definido' :
+                    comparisonOptions.find(o => o.id === selectedWinner)?.label || 'Desconhecido',
+        confidence: newConfidence,
+        reasoning: reasoning.trim(),
+        timestamp: new Date().toISOString()
+      };
+      
+      onResult(result);
+    }
+  };
+
+  const handleReasoningChange = (newReasoning: string) => {
+    setReasoning(newReasoning);
+    
+    // Se já há um vencedor selecionado, salvar automaticamente
+    if (selectedWinner) {
+      const result: ComparisonResult = {
+        rowId: comparisonRow.id,
+        winnerId: selectedWinner,
+        winnerLabel: selectedWinner === 'tie' ? 'Empate' : 
+                    selectedWinner === 'undefined' ? 'Não definido' :
+                    comparisonOptions.find(o => o.id === selectedWinner)?.label || 'Desconhecido',
+        confidence,
+        reasoning: newReasoning.trim(),
+        timestamp: new Date().toISOString()
+      };
+      
+      onResult(result);
+    }
+  };
+
+  const startEditingLabel = (optionId: string, currentLabel: string) => {
+    setEditingLabel(optionId);
+    setTempLabel(currentLabel);
+  };
+
+  const cancelEditingLabel = () => {
+    setEditingLabel(null);
+    setTempLabel('');
+  };
+
+  const saveLabel = (optionId: string) => {
+    const newLabel = tempLabel.trim();
+    if (newLabel && onLabelChange) {
+      onLabelChange(comparisonRow.id, optionId, newLabel);
+      console.log(`📝 Label do modelo ${optionId} alterado para: ${newLabel}`);
+    }
+    
+    setEditingLabel(null);
+    setTempLabel('');
   };
 
   const getConfidenceLabel = (level: number): string => {
@@ -142,13 +246,12 @@ export default function ComparisonView({
       );
     }
 
-    // Renderizar com o componente GitHubStyle
+    // Renderizar com o componente GitHubStyle sem onSelect (usamos os botões centralizados)
     return (
       <GitHubStyleSuggestion
         suggestion={output.parsed}
         title={output.label || 'Sugestão'}
         isSelected={selectedWinner === output.id}
-        onSelect={() => handleWinnerSelection(output.id, output.label || 'Sugestão')}
       />
     );
   };
@@ -166,14 +269,23 @@ export default function ComparisonView({
             <span className="text-sm text-gray-500">ID: {comparisonRow.id}</span>
           </div>
           
-          {existingResult && (
-            <div className="flex items-center space-x-2 text-sm">
-              <Crown className="w-4 h-4 text-yellow-500" />
-              <span className="font-medium text-gray-700">
-                Vencedor: {existingResult.winnerLabel}
-              </span>
-            </div>
-          )}
+          <div className="flex items-center space-x-3">
+            {existingResult && (
+              <div className="flex items-center space-x-2 text-sm">
+                <Crown className="w-4 h-4 text-yellow-500" />
+                <span className="font-medium text-gray-700">
+                  Resultado salvo: {existingResult.winnerLabel}
+                </span>
+              </div>
+            )}
+            
+            {!existingResult && (
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                <span>Nova comparação</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
@@ -228,21 +340,82 @@ export default function ComparisonView({
 
       {/* Comparação das Opções */}
       <div className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Escolha a melhor sugestão:
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Escolha a melhor sugestão:
+          </h3>
+          <div className="flex items-center text-sm text-gray-500">
+            <Edit2 className="w-4 h-4 mr-1" />
+            <span>💡 Renomeie os modelos (ex: GPT-4, Claude) - vale para todas as comparações</span>
+            {Object.keys(savedLabels).length > 0 && (
+              <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                {Object.keys(savedLabels).length} personalizado{Object.keys(savedLabels).length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        </div>
 
         <div className="space-y-6">
           {comparisonOptions.map((option) => (
             <div key={option.id} className="space-y-2">
-              {/* Header simplificado */}
+              {/* Header com edição de label */}
               <div className="flex items-center justify-between px-1">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                  <span>{option.label || 'Sem Label'}</span>
-                  {selectedWinner === option.id && (
-                    <Crown className="w-5 h-5 text-yellow-500" />
+                <div className="flex items-center space-x-2">
+                  {editingLabel === option.id ? (
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={tempLabel}
+                        onChange={(e) => setTempLabel(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            saveLabel(option.id);
+                          } else if (e.key === 'Escape') {
+                            cancelEditingLabel();
+                          }
+                        }}
+                        className="px-2 py-1 border border-blue-300 rounded text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                        placeholder="Nome do modelo"
+                      />
+                      <button
+                        onClick={() => saveLabel(option.id)}
+                        className="p-1 text-green-600 hover:text-green-800"
+                        title="Salvar"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={cancelEditingLabel}
+                        className="p-1 text-red-600 hover:text-red-800"
+                        title="Cancelar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2 group">
+                      <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                        <span>{option.label || 'Sem Label'}</span>
+                        {savedLabels[option.id] && (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" title="Nome personalizado">
+                            ✏️
+                          </span>
+                        )}
+                        {selectedWinner === option.id && (
+                          <Crown className="w-5 h-5 text-yellow-500" />
+                        )}
+                      </h4>
+                      <button
+                        onClick={() => startEditingLabel(option.id, option.label || '')}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-600 transition-opacity"
+                        title="Renomear modelo"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
-                </h4>
+                </div>
                 
                 {selectedWinner === option.id && (
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
@@ -252,12 +425,111 @@ export default function ComparisonView({
                 )}
               </div>
 
-              {/* Renderizar com o novo componente */}
+              {/* Renderizar sem botão de seleção individual */}
               <div>
-                {renderSuggestionPreview(option)}
+                <GitHubStyleSuggestion
+                  suggestion={option.parsed || { overallSummary: 'Erro de processamento', codeSuggestions: [] }}
+                  title={option.label || 'Sugestão'}
+                  isSelected={selectedWinner === option.id}
+                  // Remover onSelect para usar apenas os botões centralizados
+                />
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Resultado atual */}
+        {selectedWinner && (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-center mb-4">
+              <div className={clsx(
+                'inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium',
+                selectedWinner === 'tie' ? 'bg-yellow-100 text-yellow-800' :
+                selectedWinner === 'undefined' ? 'bg-gray-100 text-gray-800' :
+                'bg-green-100 text-green-800'
+              )}>
+                {selectedWinner === 'tie' && (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-yellow-600 bg-yellow-200 mr-2"></div>
+                    Resultado: Empate
+                  </>
+                )}
+                {selectedWinner === 'undefined' && (
+                  <>
+                    <div className="w-4 h-4 rounded border border-gray-600 bg-gray-200 mr-2"></div>
+                    Resultado: Não definido
+                  </>
+                )}
+                {selectedWinner !== 'tie' && selectedWinner !== 'undefined' && (
+                  <>
+                    <Crown className="w-4 h-4 mr-2" />
+                    Vencedor: {comparisonOptions.find(o => o.id === selectedWinner)?.label}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Opções de resultado */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <h4 className="text-sm font-medium text-gray-700 mb-4">
+            {selectedWinner ? 'Alterar resultado:' : 'Resultado da comparação:'}
+          </h4>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            {comparisonOptions.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => handleWinnerSelection(option.id, option.label || 'Sem Label')}
+                className={clsx(
+                  'flex flex-col items-center p-4 rounded-lg border-2 transition-all text-sm',
+                  selectedWinner === option.id
+                    ? 'border-green-500 bg-green-50 text-green-800'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                )}
+              >
+                <Crown className={clsx(
+                  'w-5 h-5 mb-2',
+                  selectedWinner === option.id ? 'text-green-600' : 'text-gray-400'
+                )} />
+                <span className="font-medium">{option.label || 'Sem Label'}</span>
+              </button>
+            ))}
+            
+            {/* Opção de empate */}
+            <button
+              onClick={() => handleWinnerSelection('tie', 'Empate')}
+              className={clsx(
+                'flex flex-col items-center p-4 rounded-lg border-2 transition-all text-sm',
+                selectedWinner === 'tie'
+                  ? 'border-yellow-500 bg-yellow-50 text-yellow-800'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+              )}
+            >
+              <div className={clsx(
+                'w-5 h-5 mb-2 rounded-full border-2',
+                selectedWinner === 'tie' ? 'border-yellow-600 bg-yellow-200' : 'border-gray-400'
+              )}></div>
+              <span className="font-medium">Empate</span>
+            </button>
+            
+            {/* Opção de não definido */}
+            <button
+              onClick={() => handleWinnerSelection('undefined', 'Não definido')}
+              className={clsx(
+                'flex flex-col items-center p-4 rounded-lg border-2 transition-all text-sm',
+                selectedWinner === 'undefined'
+                  ? 'border-gray-500 bg-gray-50 text-gray-800'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-700'
+              )}
+            >
+              <div className={clsx(
+                'w-5 h-5 mb-2 rounded border',
+                selectedWinner === 'undefined' ? 'border-gray-600 bg-gray-200' : 'border-gray-400'
+              )}></div>
+              <span className="font-medium">Não definido</span>
+            </button>
+          </div>
         </div>
 
         {/* Confiança e Justificativa */}
@@ -274,7 +546,7 @@ export default function ComparisonView({
                     min="1"
                     max="5"
                     value={confidence}
-                    onChange={(e) => setConfidence(Number(e.target.value))}
+                    onChange={(e) => handleConfidenceChange(Number(e.target.value))}
                     className="w-full"
                   />
                   <div className="flex justify-between text-sm text-gray-500">
@@ -303,7 +575,7 @@ export default function ComparisonView({
                 {showReasoningInput && (
                   <textarea
                     value={reasoning}
-                    onChange={(e) => setReasoning(e.target.value)}
+                    onChange={(e) => handleReasoningChange(e.target.value)}
                     placeholder="Por que esta opção é melhor?"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={3}

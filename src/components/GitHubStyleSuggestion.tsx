@@ -11,7 +11,8 @@ import {
   ChevronDown,
   ChevronRight,
   Code2,
-  ExternalLink
+  ExternalLink,
+  Crown
 } from 'lucide-react';
 import clsx from 'clsx';
 import CodeBlock from './CodeBlock';
@@ -61,6 +62,52 @@ export default function GitHubStyleSuggestion({
       default:
         return 'bg-green-100 text-green-800 border-green-200';
     }
+  };
+
+  const inferSeverityFromLabel = (label?: string): string => {
+    if (!label) return 'suggestion';
+    
+    const lowerLabel = label.toLowerCase();
+    
+    // Mapear labels comuns para severidade
+    if (lowerLabel.includes('critical') || lowerLabel.includes('security') || lowerLabel.includes('vulnerability') || lowerLabel.includes('exploit')) {
+      return 'critical';
+    }
+    if (lowerLabel.includes('error') || lowerLabel.includes('bug') || lowerLabel.includes('fix') || lowerLabel.includes('crash') || lowerLabel.includes('fail')) {
+      return 'error';
+    }
+    if (lowerLabel.includes('warning') || lowerLabel.includes('deprecated') || lowerLabel.includes('performance') || lowerLabel.includes('slow') || lowerLabel.includes('memory')) {
+      return 'warning';
+    }
+    if (lowerLabel.includes('info') || lowerLabel.includes('documentation') || lowerLabel.includes('comment') || lowerLabel.includes('style') || lowerLabel.includes('format')) {
+      return 'info';
+    }
+    
+    // Labels específicos comuns no contexto de code review
+    const severityMap: { [key: string]: string } = {
+      'refactoring': 'info',
+      'optimization': 'warning',
+      'maintainability': 'info',
+      'readability': 'info',
+      'code_smell': 'warning',
+      'best_practices': 'info',
+      'naming': 'info',
+      'duplication': 'warning',
+      'complexity': 'warning',
+      'type_safety': 'error',
+      'null_pointer': 'error',
+      'resource_leak': 'critical',
+      'injection': 'critical',
+      'xss': 'critical'
+    };
+    
+    for (const [key, severity] of Object.entries(severityMap)) {
+      if (lowerLabel.includes(key)) {
+        return severity;
+      }
+    }
+    
+    return 'suggestion'; // default
   };
 
   const extractCodeFromSuggestion = (suggestionContent: string) => {
@@ -198,11 +245,16 @@ export default function GitHubStyleSuggestion({
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  {codeSuggestion.label && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {codeSuggestion.label}
-                    </span>
-                  )}
+                  {codeSuggestion.label && (() => {
+                    const severity = codeSuggestion.severity || inferSeverityFromLabel(codeSuggestion.label);
+                    console.log(`🏷️ Renderizando label "${codeSuggestion.label}" com severidade "${severity}"`);
+                    return (
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSeverityBadgeClasses(severity)}`}>
+                        {getSeverityIcon(severity)}
+                        <span className="ml-1">{codeSuggestion.label}</span>
+                      </span>
+                    );
+                  })()}
                   
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -459,19 +511,28 @@ export default function GitHubStyleSuggestion({
             </span>
           </div>
 
-          {onSelect && (
-            <button
-              onClick={onSelect}
-              className={clsx(
-                'inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                isSelected
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              )}
-            >
-              {isSelected ? 'Selecionado' : 'Selecionar'}
-            </button>
-          )}
+          <div className="flex items-center space-x-2">
+            {onSelect && (
+              <button
+                onClick={onSelect}
+                className={clsx(
+                  'inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                  isSelected
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                )}
+              >
+                {isSelected ? 'Selecionado' : 'Selecionar'}
+              </button>
+            )}
+            
+            {isSelected && !onSelect && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                <Crown className="w-4 h-4 mr-1" />
+                Selecionado
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

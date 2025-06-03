@@ -975,7 +975,7 @@ export function useCsvParser() {
               outputForComparison = {
                 output: outputs,
                 parsed: parsedSuggestion,
-                label: 'Modelo Principal'
+                label: 'Modelo B'
               };
             } 
             // Se outputs tem campo 'output' (estrutura mais complexa)
@@ -991,7 +991,7 @@ export function useCsvParser() {
               outputForComparison = {
                 output: outputs.output,
                 parsed: parsedSuggestion,
-                label: outputs.label || 'Modelo Principal'
+                label: outputs.label || 'Modelo B'
               };
             } 
             // Se outputs já é o objeto parseado (raro mas possível)
@@ -1000,7 +1000,7 @@ export function useCsvParser() {
               outputForComparison = {
                 output: JSON.stringify(outputs, null, 2),
                 parsed: outputs,
-                label: 'Modelo Principal'
+                label: 'Modelo B'
               };
             }
             // Caso padrão
@@ -1010,7 +1010,7 @@ export function useCsvParser() {
               outputForComparison = {
                 output: typeof outputs === 'string' ? outputs : JSON.stringify(outputs, null, 2),
                 parsed: undefined,
-                label: 'Modelo Principal'
+                label: 'Modelo B'
               };
             }
           } catch (e) {
@@ -1024,7 +1024,7 @@ export function useCsvParser() {
                 overallSummary: `Erro ao processar linha ${i + 1}: ${errorMsg}`,
                 codeSuggestions: []
               },
-              label: 'Modelo Principal (com erro)'
+              label: 'Modelo B (com erro)'
             };
           }
           
