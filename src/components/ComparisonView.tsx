@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { ComparisonRow, ComparisonOutput, ComparisonResult, SuggestionData } from '@/types/suggestion';
-import SuggestionCard from './SuggestionCard';
-import { Crown, Star, FileText, GitPullRequest, ChevronRight } from 'lucide-react';
+import GitHubStyleSuggestion from './GitHubStyleSuggestion';
+import { Crown, Star, FileText, GitPullRequest, ChevronRight, AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
 
 interface ComparisonViewProps {
@@ -79,116 +79,77 @@ export default function ComparisonView({
   const renderSuggestionPreview = (output: ComparisonOutput & { id: string }) => {
     console.log('renderSuggestionPreview chamado com output:', output);
     console.log('output.parsed:', output.parsed);
-    console.log('Análise do output:', {
-      outputType: typeof output.output,
-      outputIsString: typeof output.output === 'string',
-      outputIsObject: typeof output.output === 'object',
-      parsedType: typeof output.parsed,
-      parsedIsNull: output.parsed === null,
-      parsedIsUndefined: output.parsed === undefined,
-      hasCodeSuggestions: output.parsed?.codeSuggestions ? output.parsed.codeSuggestions.length : 'N/A'
-    });
     
-    if (!output.parsed) {
-      console.log('output.parsed é null/undefined, mostrando preview simples');
-      
-      // Tratar output.output de forma segura - pode ser string, objeto, etc.
+    // Se não há dados parseados ou tem erro, mostrar fallback
+    if (!output.parsed || (output.parsed as any).fallback) {
       let displayOutput = '';
+      let errorInfo = '';
+      
+      if ((output.parsed as any)?.fallback) {
+        errorInfo = (output.parsed as any).errorMessage || 'Erro no processamento';
+      }
+      
       try {
         if (typeof output.output === 'string') {
-          displayOutput = output.output.substring(0, 200) + (output.output.length > 200 ? '...' : '');
+          displayOutput = output.output.substring(0, 300) + (output.output.length > 300 ? '...' : '');
         } else if (typeof output.output === 'object') {
-          displayOutput = JSON.stringify(output.output, null, 2).substring(0, 200) + '...';
+          displayOutput = JSON.stringify(output.output, null, 2).substring(0, 300) + '...';
         } else {
-          displayOutput = String(output.output).substring(0, 200) + '...';
+          displayOutput = String(output.output).substring(0, 300) + '...';
         }
       } catch (e) {
         displayOutput = 'Erro ao exibir conteúdo: ' + String(e);
       }
       
       return (
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <p className="text-gray-600 text-sm">Não foi possível analisar esta sugestão</p>
-          <pre className="text-xs text-gray-500 mt-2 overflow-x-auto whitespace-pre-wrap">
-            {displayOutput}
-          </pre>
-        </div>
-      );
-    }
-
-    const suggestion = output.parsed.codeSuggestions?.[0];
-    console.log('suggestion extraída:', suggestion);
-    
-    if (!suggestion) {
-      console.log('Nenhuma suggestion encontrada em codeSuggestions');
-      console.log('Estrutura do parsed:', Object.keys(output.parsed || {}));
-      console.log('codeSuggestions array:', output.parsed?.codeSuggestions);
-      
-      return (
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <p className="text-gray-600 text-sm">Nenhuma sugestão encontrada</p>
-          <p className="text-xs text-gray-400 mt-1">
-            overallSummary: {output.parsed.overallSummary || 'N/A'}
-          </p>
-          <details className="mt-2">
-            <summary className="text-xs text-gray-400 cursor-pointer">Debug info</summary>
-            <pre className="text-xs text-gray-400 mt-1 overflow-x-auto whitespace-pre-wrap">
-              {JSON.stringify(output.parsed, null, 2)}
-            </pre>
-          </details>
-        </div>
-      );
-    }
-
-    console.log('Renderizando suggestion completa:', suggestion);
-    
-    return (
-      <div className="space-y-4">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-medium text-blue-900 mb-2">Resumo Geral</h4>
-          <p className="text-blue-800 text-sm">{output.parsed.overallSummary}</p>
-        </div>
-        
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center space-x-2 text-sm text-gray-600 mb-3">
-            <FileText className="w-4 h-4" />
-            <span>{suggestion.relevantFile || 'Arquivo não especificado'}</span>
-            {(suggestion.relevantLinesStart || suggestion.relevantLinesEnd) && (
-              <>
-                <span>•</span>
-                <span>
-                  Linhas {suggestion.relevantLinesStart || '?'}-{suggestion.relevantLinesEnd || '?'}
-                </span>
-              </>
+        <div className="border border-red-200 rounded-lg overflow-hidden">
+          <div className="bg-red-50 border-b border-red-200 px-4 py-3">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-red-500" />
+              <span className="font-medium text-red-800">Dados com problema</span>
+            </div>
+            {errorInfo && (
+              <p className="text-red-700 text-sm mt-1">{errorInfo}</p>
             )}
           </div>
-          
-          <h5 className="font-medium text-gray-900 mb-2">
-            {suggestion.oneSentenceSummary || 'Resumo não disponível'}
-          </h5>
-          
-          <p className="text-gray-700 text-sm leading-relaxed">
-            {suggestion.suggestionContent || 'Conteúdo da sugestão não disponível'}
-          </p>
-
-          <div className="mt-3 flex items-center justify-between">
-            <span className={clsx(
-              'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
-              'bg-blue-100 text-blue-800'
-            )}>
-              {suggestion.label || 'sem-categoria'}
-            </span>
-            
-            {/* Debug info quando necessário */}
-            <details className="text-xs">
-              <summary className="text-gray-400 cursor-pointer">Debug</summary>
-              <pre className="text-gray-400 mt-1 max-w-xs overflow-x-auto">
-                {JSON.stringify(suggestion, null, 2)}
-              </pre>
-            </details>
+          <div className="p-4 bg-gray-50">
+            <p className="text-gray-600 text-sm mb-2">Conteúdo original (limitado):</p>
+            <pre className="text-xs text-gray-500 overflow-x-auto whitespace-pre-wrap font-mono">
+              {displayOutput}
+            </pre>
           </div>
         </div>
-      </div>
+      );
+    }
+
+    // Se não há codeSuggestions, mostrar info básica
+    if (!output.parsed.codeSuggestions || output.parsed.codeSuggestions.length === 0) {
+      return (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+            <div className="flex items-center space-x-2">
+              <FileText className="w-4 h-4 text-gray-500" />
+              <span className="font-medium text-gray-700">Sem sugestões específicas</span>
+            </div>
+          </div>
+          <div className="p-4">
+            <p className="text-gray-600 text-sm mb-2">Resumo geral:</p>
+            <p className="text-gray-800 text-sm leading-relaxed">
+              {output.parsed.overallSummary || 'Nenhum resumo disponível'}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Renderizar com o componente GitHubStyle
+    return (
+      <GitHubStyleSuggestion
+        suggestion={output.parsed}
+        title={output.label || 'Sugestão'}
+        isSelected={selectedWinner === output.id}
+        onSelect={() => handleWinnerSelection(output.id, output.label || 'Sugestão')}
+      />
     );
   };
 
@@ -215,20 +176,53 @@ export default function ComparisonView({
           )}
         </div>
 
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center space-x-2 text-sm text-gray-600 mb-2">
-            <GitPullRequest className="w-4 h-4" />
-            <span>Arquivo: {comparisonRow.inputs.filePath}</span>
-            <span>•</span>
-            <span>Linguagem: {comparisonRow.inputs.language}</span>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center space-x-3 mb-3">
+            <GitPullRequest className="w-5 h-5 text-blue-600" />
+            <h3 className="font-medium text-blue-900">Contexto do Código</h3>
           </div>
           
-          {comparisonRow.inputs.pullRequest?.title && (
-            <div className="text-sm text-gray-700">
-              <span className="font-medium">PR: </span>
-              {comparisonRow.inputs.pullRequest.title}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <FileText className="w-4 h-4 text-blue-600" />
+                <span className="font-medium text-blue-800">Arquivo:</span>
+                <code className="bg-blue-100 px-2 py-1 rounded text-blue-900 font-mono text-xs">
+                  {comparisonRow.inputs.filePath || 'Não especificado'}
+                </code>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <span className="w-4 h-4 text-blue-600">🔧</span>
+                <span className="font-medium text-blue-800">Linguagem:</span>
+                <span className="bg-blue-100 px-2 py-1 rounded text-blue-900 text-xs">
+                  {comparisonRow.inputs.language || 'Não especificado'}
+                </span>
+              </div>
             </div>
-          )}
+            
+            {comparisonRow.inputs.pullRequest?.title && (
+              <div className="md:col-span-2">
+                <div className="flex items-start space-x-2">
+                  <span className="font-medium text-blue-800">Pull Request:</span>
+                  <span className="text-blue-700">
+                    {comparisonRow.inputs.pullRequest.title}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {comparisonRow.inputs.description && (
+              <div className="md:col-span-2">
+                <div className="flex items-start space-x-2">
+                  <span className="font-medium text-blue-800">Descrição:</span>
+                  <span className="text-blue-700">
+                    {comparisonRow.inputs.description}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -238,40 +232,28 @@ export default function ComparisonView({
           Escolha a melhor sugestão:
         </h3>
 
-        <div className="grid gap-6" style={{
-          gridTemplateColumns: `repeat(${comparisonOptions.length}, minmax(0, 1fr))`
-        }}>
+        <div className="space-y-6">
           {comparisonOptions.map((option) => (
-            <div key={option.id} className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-gray-900">
-                  {option.label || 'Sem Label'}
+            <div key={option.id} className="space-y-2">
+              {/* Header simplificado */}
+              <div className="flex items-center justify-between px-1">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                  <span>{option.label || 'Sem Label'}</span>
+                  {selectedWinner === option.id && (
+                    <Crown className="w-5 h-5 text-yellow-500" />
+                  )}
                 </h4>
                 
-                <button
-                  onClick={() => handleWinnerSelection(option.id, option.label || 'Sem Label')}
-                  className={clsx(
-                    'inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                    selectedWinner === option.id
-                      ? 'bg-green-600 text-white shadow-lg'
-                      : 'bg-gray-100 text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-300'
-                  )}
-                >
-                  {selectedWinner === option.id ? (
-                    <>
-                      <Crown className="w-4 h-4 mr-2" />
-                      Vencedor
-                    </>
-                  ) : (
-                    <>
-                      Escolher
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </>
-                  )}
-                </button>
+                {selectedWinner === option.id && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    <Crown className="w-4 h-4 mr-1" />
+                    Vencedor
+                  </span>
+                )}
               </div>
 
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              {/* Renderizar com o novo componente */}
+              <div>
                 {renderSuggestionPreview(option)}
               </div>
             </div>
