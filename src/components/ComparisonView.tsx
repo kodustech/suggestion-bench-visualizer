@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { ComparisonRow, ComparisonOutput, ComparisonResult, SuggestionData } from '@/types/suggestion';
 import GitHubStyleSuggestion from './GitHubStyleSuggestion';
-import { Crown, Star, FileText, GitPullRequest, ChevronRight, AlertTriangle, Edit2, Check, X } from 'lucide-react';
+import CodeBlock from './CodeBlock';
+import { Crown, Star, FileText, GitPullRequest, ChevronRight, AlertTriangle, Edit2, Check, X, Eye, EyeOff } from 'lucide-react';
 import clsx from 'clsx';
 
 interface ComparisonViewProps {
@@ -32,6 +33,7 @@ export default function ComparisonView({
   const [currentComparisonId, setCurrentComparisonId] = useState<string>(comparisonRow.id);
   const [editingLabel, setEditingLabel] = useState<string | null>(null);
   const [tempLabel, setTempLabel] = useState<string>('');
+  const [showFullFile, setShowFullFile] = useState(false);
 
   // Limpar decisão quando muda de comparação
   useEffect(() => {
@@ -265,85 +267,61 @@ export default function ComparisonView({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      {/* Header */}
-      <div className="border-b border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <span className="text-sm font-medium text-gray-500">
-              Comparação {index + 1} de {total}
-            </span>
-            <span className="text-sm text-gray-400">•</span>
-            <span className="text-sm text-gray-500">ID: {comparisonRow.id}</span>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            {existingResult && (
-              <div className="flex items-center space-x-2 text-sm">
-                <Crown className="w-4 h-4 text-yellow-500" />
-                <span className="font-medium text-gray-700">
-                  Saved result: {existingResult.winnerLabel}
-                </span>
-              </div>
-            )}
-            
-            {!existingResult && (
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                <span>Nova comparação</span>
-              </div>
-            )}
-          </div>
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm mb-8">
+      {/* Card Header */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl font-semibold text-gray-800">
+            Comparação {index + 1} de {total}
+          </h2>
+          <span className="text-sm text-gray-500">ID: {comparisonRow.id}</span>
         </div>
 
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center space-x-3 mb-3">
-            <GitPullRequest className="w-5 h-5 text-blue-600" />
-            <h3 className="font-medium text-blue-900">Code Context</h3>
+        {comparisonRow.inputs.pullRequest?.html_url && (
+          <div className="mb-4 text-sm">
+            <a
+              href={comparisonRow.inputs.pullRequest.html_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              <GitPullRequest className="w-4 h-4 mr-1.5" />
+              Ver Pull Request #{comparisonRow.inputs.pullRequest.number} ( {comparisonRow.inputs.pullRequest.title} )
+              <ChevronRight className="w-3 h-3 ml-1" />
+            </a>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <FileText className="w-4 h-4 text-blue-600" />
-                <span className="font-medium text-blue-800">File:</span>
-                <code className="bg-blue-100 px-2 py-1 rounded text-blue-900 font-mono text-xs">
-                  {comparisonRow.inputs.filePath || 'Not specified'}
-                </code>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <span className="w-4 h-4 text-blue-600">🔧</span>
-                <span className="font-medium text-blue-800">Language:</span>
-                <span className="bg-blue-100 px-2 py-1 rounded text-blue-900 text-xs">
-                  {comparisonRow.inputs.language || 'Not specified'}
-                </span>
-              </div>
-            </div>
-            
-            {comparisonRow.inputs.pullRequest?.title && (
-              <div className="md:col-span-2">
-                <div className="flex items-start space-x-2">
-                  <span className="font-medium text-blue-800">Pull Request:</span>
-                  <span className="text-blue-700">
-                    {comparisonRow.inputs.pullRequest.title}
-                  </span>
-                </div>
-              </div>
-            )}
-            
-            {comparisonRow.inputs.description && (
-              <div className="md:col-span-2">
-                <div className="flex items-start space-x-2">
-                  <span className="font-medium text-blue-800">Description:</span>
-                  <span className="text-blue-700">
-                    {comparisonRow.inputs.description}
-                  </span>
-                </div>
-              </div>
-            )}
+        )}
+        
+        {/* Botão para mostrar/ocultar arquivo completo */}
+        {comparisonRow.inputs.fileContent && comparisonRow.inputs.filePath && (
+          <div className="my-4">
+            <button
+              onClick={() => setShowFullFile(!showFullFile)}
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              {showFullFile ? (
+                <EyeOff className="w-4 h-4 mr-1.5" />
+              ) : (
+                <Eye className="w-4 h-4 mr-1.5" />
+              )}
+              {showFullFile ? 'Ocultar arquivo completo' : 'Mostrar arquivo completo'}
+            </button>
           </div>
-        </div>
+        )}
+
+        {/* CodeBlock para o arquivo completo */}
+        {showFullFile && comparisonRow.inputs.fileContent && comparisonRow.inputs.filePath && (
+          <div className="mt-4 border border-gray-200 rounded-lg">
+            <CodeBlock
+              code={comparisonRow.inputs.fileContent}
+              language={comparisonRow.inputs.language || 'text'} // Default para text se não houver linguagem
+              fileName={comparisonRow.inputs.filePath}
+              isDiff={false} // Queremos visualização normal com tema okaidia
+              title={`Conteúdo completo de: ${comparisonRow.inputs.filePath}`}
+              showLineNumbers={true}
+            />
+          </div>
+        )}
       </div>
 
       {/* Comparação das Opções */}

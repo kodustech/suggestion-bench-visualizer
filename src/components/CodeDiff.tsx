@@ -1,14 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Prism from 'prismjs';
-import 'prismjs/themes/prism-tomorrow.css';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-typescript';
-import 'prismjs/components/prism-jsx';
-import 'prismjs/components/prism-tsx';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-json';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { okaidia } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import clsx from 'clsx';
 
 interface CodeDiffProps {
@@ -18,32 +11,6 @@ interface CodeDiffProps {
 }
 
 export default function CodeDiff({ oldCode, newCode, language }: CodeDiffProps) {
-  const [highlightedOld, setHighlightedOld] = useState('');
-  const [highlightedNew, setHighlightedNew] = useState('');
-
-  useEffect(() => {
-    const prismLang = language === 'javascript' ? 'js' : language;
-    
-    try {
-      const oldHighlighted = Prism.highlight(
-        oldCode,
-        Prism.languages[prismLang] || Prism.languages.text,
-        prismLang
-      );
-      const newHighlighted = Prism.highlight(
-        newCode,
-        Prism.languages[prismLang] || Prism.languages.text,
-        prismLang
-      );
-      
-      setHighlightedOld(oldHighlighted);
-      setHighlightedNew(newHighlighted);
-    } catch (error) {
-      setHighlightedOld(oldCode);
-      setHighlightedNew(newCode);
-    }
-  }, [oldCode, newCode, language]);
-
   const renderLineNumbers = (code: string) => {
     const lines = code.split('\n');
     return lines.map((_, index) => (
@@ -56,14 +23,33 @@ export default function CodeDiff({ oldCode, newCode, language }: CodeDiffProps) 
     ));
   };
 
-  const renderCode = (highlightedCode: string) => {
+  const renderCode = (codeString: string, lang: string) => {
+    console.log('CodeDiff language prop:', lang, 'Processed language for highlighter:', lang.toLowerCase());
     return (
-      <pre className="text-sm leading-6 overflow-x-auto">
-        <code
-          dangerouslySetInnerHTML={{ __html: highlightedCode }}
-          className="language-javascript"
-        />
-      </pre>
+      <SyntaxHighlighter
+        language={lang.toLowerCase()}
+        style={okaidia}
+        showLineNumbers={false}
+        wrapLines={true}
+        wrapLongLines={true}
+        customStyle={{
+          margin: 0,
+          padding: '1rem',
+          fontSize: '0.875rem',
+          lineHeight: '1.5rem',
+          overflowX: 'auto',
+          width: '100%',
+        }}
+        codeTagProps={{
+          style: {
+            fontFamily: 'inherit',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }
+        }}
+      >
+        {codeString}
+      </SyntaxHighlighter>
     );
   };
 
@@ -75,12 +61,12 @@ export default function CodeDiff({ oldCode, newCode, language }: CodeDiffProps) 
           <div className="bg-red-50 px-4 py-2 border-b border-gray-200">
             <span className="text-red-700 font-medium">Existing Code</span>
           </div>
-          <div className="flex bg-gray-50">
-            <div className="flex flex-col bg-gray-100 border-r border-gray-200 min-w-[60px]">
+          <div className="flex">
+            <div className="flex flex-col bg-gray-100 border-r border-gray-200 min-w-[60px] pt-4">
               {renderLineNumbers(oldCode)}
             </div>
-            <div className="flex-1 p-4 bg-red-50/50">
-              {renderCode(highlightedOld)}
+            <div className="flex-1">
+              {renderCode(oldCode, language)}
             </div>
           </div>
         </div>
@@ -90,12 +76,12 @@ export default function CodeDiff({ oldCode, newCode, language }: CodeDiffProps) 
           <div className="bg-green-50 px-4 py-2 border-b border-gray-200">
             <span className="text-green-700 font-medium">Improved Code</span>
           </div>
-          <div className="flex bg-gray-50">
-            <div className="flex flex-col bg-gray-100 border-r border-gray-200 min-w-[60px]">
+          <div className="flex">
+            <div className="flex flex-col bg-gray-100 border-r border-gray-200 min-w-[60px] pt-4">
               {renderLineNumbers(newCode)}
             </div>
-            <div className="flex-1 p-4 bg-green-50/50">
-              {renderCode(highlightedNew)}
+            <div className="flex-1">
+              {renderCode(newCode, language)}
             </div>
           </div>
         </div>

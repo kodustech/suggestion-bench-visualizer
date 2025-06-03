@@ -860,11 +860,21 @@ export function useCsvParser() {
       }
 
       // Identificar colunas de output dos modelos
-      const modelOutputColumns = headers.filter(h => h.endsWith('_outputs') && h !== 'reference_outputs');
+      let modelOutputColumns = headers.filter(h => h.endsWith('_outputs') && h !== 'reference_outputs');
+
       if (modelOutputColumns.length === 0) {
-        throw new Error('No model output columns found. Ensure CSV has columns ending with \'_outputs\'.');
+        // Se nenhuma coluna _outputs for encontrada, verificar se existe uma coluna 'outputs'
+        const singleOutputColumn = headers.find(h => h === 'outputs');
+        if (singleOutputColumn) {
+          modelOutputColumns = [singleOutputColumn];
+          console.log('🤖 Single model output column "outputs" identified:', modelOutputColumns);
+        } else {
+          // Se nem colunas _outputs nem 'outputs' forem encontradas, lançar o erro
+          throw new Error('No model output columns found. Ensure CSV has columns ending with \'_outputs\' or a single column named \'outputs\'.');
+        }
+      } else {
+        console.log('🤖 Model output columns identified (ending with _outputs):', modelOutputColumns);
       }
-      console.log('🤖 Model output columns identified:', modelOutputColumns);
 
       const comparisonRows: ComparisonRow[] = [];
       const skippedRows: number[] = [];

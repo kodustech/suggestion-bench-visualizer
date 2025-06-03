@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Copy, Check, FileText, Code2, ChevronDown, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { okaidia, ghcolors } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 interface CodeBlockProps {
   code: string;
@@ -202,7 +204,46 @@ export default function CodeBlock({
       </div>
 
       {/* Code Content */}
-      {!isCollapsed && (
+      {!isCollapsed && !isDiff && (
+        <div className="flex overflow-x-auto">
+          {showLineNumbers && (
+            <div className="sticky left-0 z-10 select-none bg-gray-50 pr-2 text-right font-mono text-sm text-gray-700">
+              {lines.map((line) => (
+                <div key={`ln-${line.number}`} className="leading-relaxed">
+                  {line.number}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="flex-grow">
+            <SyntaxHighlighter
+              language={language.toLowerCase()}
+              style={okaidia}
+              showLineNumbers={false}
+              wrapLines={true}
+              wrapLongLines={true}
+              customStyle={{
+                margin: 0,
+                width: '100%',
+                fontSize: '1em',
+                fontFamily: 'inherit',
+              }}
+              codeTagProps={{
+                style: {
+                  fontFamily: 'inherit',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  display: 'block',
+                }
+              }}
+            >
+              {code}
+            </SyntaxHighlighter>
+          </div>
+        </div>
+      )}
+
+      {!isCollapsed && isDiff && (
         <div className="overflow-x-auto">
           <table className="w-full">
             <tbody>
@@ -210,16 +251,37 @@ export default function CodeBlock({
                 <tr key={index} className={getLineClasses(line.type)}>
                   {showLineNumbers && (
                     <td className={clsx(
-                      'px-3 py-1 text-sm font-mono select-none border-r border-dashed w-16 text-right font-medium',
+                      'px-3 py-1 text-sm font-mono select-none border-r border-dashed w-16 text-right font-medium align-top',
                       getLineNumberClasses(line.type)
                     )}>
                       {line.number}
                     </td>
                   )}
-                  <td className="px-4 py-1">
-                    <pre className="text-base font-mono whitespace-pre-wrap break-words text-gray-900 leading-relaxed">
-                      <code className="text-gray-900">{line.content || ' '}</code>
-                    </pre>
+                  <td className="px-4 py-1 align-top">
+                    <SyntaxHighlighter
+                      language={language.toLowerCase()}
+                      style={ghcolors}
+                      showLineNumbers={false}
+                      wrapLines={true}
+                      wrapLongLines={true}
+                      customStyle={{
+                        margin: 0,
+                        padding: 0,
+                        backgroundColor: 'transparent',
+                        fontSize: '1em',
+                        fontFamily: 'inherit',
+                      }}
+                      codeTagProps={{
+                        style: {
+                          fontFamily: 'inherit',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          display: 'block',
+                        }
+                      }}
+                    >
+                      {line.content || ' '}
+                    </SyntaxHighlighter>
                   </td>
                 </tr>
               ))}
