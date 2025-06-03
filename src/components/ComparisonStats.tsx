@@ -44,8 +44,8 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
   const specialResults = getSpecialResults();
 
   const getMedalColor = (index: number) => {
-    if (index === 0) return 'text-yellow-500'; // Ouro
-    if (index === 1) return 'text-gray-400';   // Prata
+    if (index === 0) return 'text-yellow-500'; // Gold
+    if (index === 1) return 'text-gray-400';   // Silver
     if (index === 2) return 'text-orange-600'; // Bronze
     return 'text-gray-300';
   };
@@ -60,23 +60,23 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
       <div className="flex items-center space-x-3 mb-6">
         <BarChart className="w-6 h-6 text-blue-600" />
         <h2 className="text-xl font-semibold text-gray-900">
-          Estatísticas das Comparações
+          Statistics of Comparisons
         </h2>
       </div>
 
-      {/* Progresso Geral */}
+      {/* General Progress */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <Target className="w-5 h-5 text-blue-600" />
-            <span className="text-sm font-medium text-blue-800">Progresso</span>
+            <span className="text-sm font-medium text-blue-800">Progress</span>
           </div>
           <div className="mt-2">
             <div className="text-2xl font-bold text-blue-900">
               {Math.round(completionPercentage)}%
             </div>
             <div className="text-sm text-blue-700">
-              {stats.completedComparisons} de {stats.totalComparisons}
+              {stats.completedComparisons} of {stats.totalComparisons}
             </div>
             <div className="w-full bg-blue-200 rounded-full h-2 mt-2">
               <div 
@@ -90,15 +90,15 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <TrendingUp className="w-5 h-5 text-green-600" />
-            <span className="text-sm font-medium text-green-800">Confiança Média</span>
+            <span className="text-sm font-medium text-green-800">Average Confidence</span>
           </div>
           <div className="mt-2">
             <div className="text-2xl font-bold text-green-900">
               {stats.averageConfidence.toFixed(1)}/5
             </div>
             <div className="text-sm text-green-700">
-              {stats.averageConfidence >= 4 ? 'Alta' : 
-               stats.averageConfidence >= 3 ? 'Média' : 'Baixa'}
+              {stats.averageConfidence >= 4 ? 'High' : 
+               stats.averageConfidence >= 3 ? 'Medium' : 'Low'}
             </div>
           </div>
         </div>
@@ -106,14 +106,14 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <Crown className="w-5 h-5 text-purple-600" />
-            <span className="text-sm font-medium text-purple-800">Modelos</span>
+            <span className="text-sm font-medium text-purple-800">Models</span>
           </div>
           <div className="mt-2">
             <div className="text-2xl font-bold text-purple-900">
               {Object.keys(stats.modelPerformance).length}
             </div>
             <div className="text-sm text-purple-700">
-              Em comparação
+              In comparison
             </div>
           </div>
         </div>
@@ -121,24 +121,24 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
           <div className="flex items-center space-x-2">
             <Award className="w-5 h-5 text-orange-600" />
-            <span className="text-sm font-medium text-orange-800">Líder</span>
+            <span className="text-sm font-medium text-orange-800">Leader</span>
           </div>
           <div className="mt-2">
             <div className="text-lg font-bold text-orange-900">
               {modelRanking[0]?.label || 'N/A'}
             </div>
             <div className="text-sm text-orange-700">
-              {modelRanking[0] ? `${modelRanking[0].winRate.toFixed(1)}% vitórias` : 'Sem dados'}
+              {modelRanking[0] ? `${modelRanking[0].winRate.toFixed(1)}% wins` : 'No data'}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tipos de Resultado */}
+      {/* Result Types */}
       {stats.completedComparisons > 0 && (
         <div className="mb-8">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Tipos de Resultado
+            Result Types
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -146,7 +146,7 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
                 <div className="text-2xl font-bold text-green-900">
                   {specialResults.decided}
                 </div>
-                <div className="text-sm text-green-700">Decisões claras</div>
+                <div className="text-sm text-green-700">Clear Decisions</div>
                 <div className="text-xs text-green-600 mt-1">
                   {((specialResults.decided / stats.completedComparisons) * 100).toFixed(1)}%
                 </div>
@@ -158,7 +158,7 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
                 <div className="text-2xl font-bold text-yellow-900">
                   {specialResults.ties}
                 </div>
-                <div className="text-sm text-yellow-700">Empates</div>
+                <div className="text-sm text-yellow-700">Ties</div>
                 <div className="text-xs text-yellow-600 mt-1">
                   {((specialResults.ties / stats.completedComparisons) * 100).toFixed(1)}%
                 </div>
@@ -170,7 +170,7 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
                 <div className="text-2xl font-bold text-gray-900">
                   {specialResults.undefined}
                 </div>
-                <div className="text-sm text-gray-700">Não definidos</div>
+                <div className="text-sm text-gray-700">Undefined</div>
                 <div className="text-xs text-gray-600 mt-1">
                   {((specialResults.undefined / stats.completedComparisons) * 100).toFixed(1)}%
                 </div>
@@ -181,10 +181,10 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Ranking dos Modelos */}
+        {/* Ranking of Models */}
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Ranking dos Modelos (apenas decisões claras)
+            Ranking of Models (only clear decisions)
           </h3>
           <div className="space-y-3">
             {modelRanking.map((model, index) => (
@@ -206,7 +206,7 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
                   <div>
                     <div className="font-medium text-gray-900">{model.label}</div>
                     <div className="text-sm text-gray-600">
-                      {model.wins} vitórias de {model.total} comparações
+                      {model.wins} wins of {model.total} comparisons
                     </div>
                   </div>
                 </div>
@@ -233,15 +233,15 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
           </div>
         </div>
 
-        {/* Distribuição de Confiança */}
+        {/* Confidence Distribution */}
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Distribuição de Confiança
+            Confidence Distribution
           </h3>
           <div className="space-y-3">
             {Object.entries(confidenceDistribution).map(([level, count]) => {
               const percentage = stats.completedComparisons > 0 ? (count / stats.completedComparisons) * 100 : 0;
-              const labels = ['', 'Muito baixa', 'Baixa', 'Média', 'Alta', 'Muito alta'];
+              const labels = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
               
               return (
                 <div key={level} className="flex items-center space-x-4">
@@ -282,15 +282,15 @@ export default function ComparisonStatsComponent({ stats, results }: ComparisonS
           <h4 className="font-medium text-blue-900 mb-2">Insights:</h4>
           <ul className="text-sm text-blue-800 space-y-1">
             {modelRanking[0] && (
-              <li>• O modelo mais performático é <strong>{modelRanking[0].label}</strong> com {modelRanking[0].winRate.toFixed(1)}% de vitórias (considerando apenas decisões claras)</li>
+              <li>• The most performant model is <strong>{modelRanking[0].label}</strong> with {modelRanking[0].winRate.toFixed(1)}% wins (considering only clear decisions)</li>
             )}
-            <li>• Confiança média nas decisões é {stats.averageConfidence >= 4 ? 'alta' : stats.averageConfidence >= 3 ? 'média' : 'baixa'} ({stats.averageConfidence.toFixed(1)}/5)</li>
-            <li>• {Math.round(completionPercentage)}% das comparações foram concluídas</li>
+            <li>• Average confidence in decisions is {stats.averageConfidence >= 4 ? 'high' : stats.averageConfidence >= 3 ? 'medium' : 'low'} ({stats.averageConfidence.toFixed(1)}/5)</li>
+            <li>• {Math.round(completionPercentage)}% of comparisons were completed</li>
             {specialResults.ties > 0 && (
-              <li>• {specialResults.ties} comparações resultaram em empate ({((specialResults.ties / stats.completedComparisons) * 100).toFixed(1)}%)</li>
+              <li>• {specialResults.ties} comparisons resulted in a tie ({((specialResults.ties / stats.completedComparisons) * 100).toFixed(1)}%)</li>
             )}
             {specialResults.undefined > 0 && (
-              <li>• {specialResults.undefined} comparações ficaram como "não definido" ({((specialResults.undefined / stats.completedComparisons) * 100).toFixed(1)}%)</li>
+              <li>• {specialResults.undefined} comparisons were left as "undefined" ({((specialResults.undefined / stats.completedComparisons) * 100).toFixed(1)}%)</li>
             )}
           </ul>
         </div>

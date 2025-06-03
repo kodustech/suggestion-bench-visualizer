@@ -36,7 +36,7 @@ export default function CodeBlock({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Falha ao copiar código:', err);
+      console.error('Failed to copy code:', err);
     }
   };
 
@@ -65,7 +65,7 @@ export default function CodeBlock({
       'shell': 'Shell',
       'bash': 'Bash',
       'powershell': 'PowerShell',
-      'text': 'Texto'
+      'text': 'Text'
     };
     return labels[lang.toLowerCase()] || lang.toUpperCase();
   };
@@ -75,7 +75,7 @@ export default function CodeBlock({
     const processedLines = lines.map((line, index) => {
       const lineNumber = startLine ? startLine + index : index + 1;
       
-      // Detectar tipo de linha em diff
+      // Detect line type in diff
       let lineType = 'normal';
       let displayLine = line;
       
@@ -163,9 +163,9 @@ export default function CodeBlock({
               <>
                 <span className="text-gray-400">•</span>
                 <span className="text-sm text-gray-600">
-                  {startLine && endLine ? `Linhas ${startLine}-${endLine}` : 
-                   startLine ? `A partir da linha ${startLine}` :
-                   endLine ? `Até a linha ${endLine}` : ''}
+                  {startLine && endLine ? `Lines ${startLine}-${endLine}` : 
+                   startLine ? `From line ${startLine}` :
+                   endLine ? `Until line ${endLine}` : ''}
                 </span>
               </>
             )}
@@ -188,12 +188,12 @@ export default function CodeBlock({
               {copied ? (
                 <>
                   <Check className="w-3 h-3 mr-1" />
-                  Copiado!
+                  Copied!
                 </>
               ) : (
                 <>
                   <Copy className="w-3 h-3 mr-1" />
-                  Copiar
+                  Copy
                 </>
               )}
             </button>
@@ -231,7 +231,7 @@ export default function CodeBlock({
       {/* Collapse indicator */}
       {isCollapsed && (
         <div className="px-4 py-3 text-center text-sm text-gray-500 bg-gray-50 border-t border-gray-200">
-          <span>{lines.length} linha{lines.length !== 1 ? 's' : ''} oculta{lines.length !== 1 ? 's' : ''}</span>
+          <span>{lines.length} line{lines.length !== 1 ? 's' : ''} hidden{lines.length !== 1 ? 's' : ''}</span>
         </div>
       )}
     </div>

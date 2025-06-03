@@ -45,7 +45,7 @@ export default function ComparisonView({
         setConfidence(existingResult.confidence);
         setReasoning(existingResult.reasoning);
         setShowReasoningInput(!!existingResult.reasoning.trim());
-        console.log(`✅ Carregando resultado salvo para comparação ${comparisonRow.id}: ${existingResult.winnerLabel}`);
+        console.log(`✅ Loading saved result for comparison ${comparisonRow.id}: ${existingResult.winnerLabel}`);
       } else {
         // Se não há resultado salvo, limpar tudo
         setSelectedWinner('');
@@ -70,7 +70,7 @@ export default function ComparisonView({
     comparisonOptions.push({
       ...comparisonRow.reference_outputs,
       id: 'reference',
-      label: savedLabel || comparisonRow.reference_outputs.label || 'Modelo A'
+      label: savedLabel || comparisonRow.reference_outputs.label || 'Model A'
     });
   }
   
@@ -78,7 +78,7 @@ export default function ComparisonView({
   comparisonOptions.push({
     ...comparisonRow.outputs,
     id: 'main',
-    label: mainSavedLabel || comparisonRow.outputs.label || 'Modelo B'
+    label: mainSavedLabel || comparisonRow.outputs.label || 'Model B'
   });
 
   if (comparisonRow.alternativeOutputs) {
@@ -87,7 +87,7 @@ export default function ComparisonView({
       comparisonOptions.push({
         ...alt,
         id: `alt_${idx}`,
-        label: altSavedLabel || alt.label || `Modelo ${String.fromCharCode(67 + idx)}` // C, D, E...
+        label: altSavedLabel || alt.label || `Model ${String.fromCharCode(67 + idx)}` // C, D, E...
       });
     });
   }
@@ -99,8 +99,8 @@ export default function ComparisonView({
     setSelectedWinner(winnerId);
     
     // Obter o label atualizado da opção (caso tenha sido renomeado)
-    const actualLabel = winnerId === 'tie' ? 'Empate' :
-                       winnerId === 'undefined' ? 'Não definido' :
+    const actualLabel = winnerId === 'tie' ? 'Tie' :
+                       winnerId === 'undefined' ? 'Undefined' :
                        comparisonOptions.find(o => o.id === winnerId)?.label || winnerLabel;
     
     const result: ComparisonResult = {
@@ -113,7 +113,7 @@ export default function ComparisonView({
     };
     
     onResult(result);
-    console.log(`🎯 Resultado selecionado para ${comparisonRow.id}: ${actualLabel}`);
+    console.log(`🎯 Selected result for ${comparisonRow.id}: ${actualLabel}`);
   };
 
   const handleConfidenceChange = (newConfidence: number) => {
@@ -124,9 +124,9 @@ export default function ComparisonView({
       const result: ComparisonResult = {
         rowId: comparisonRow.id,
         winnerId: selectedWinner,
-        winnerLabel: selectedWinner === 'tie' ? 'Empate' : 
-                    selectedWinner === 'undefined' ? 'Não definido' :
-                    comparisonOptions.find(o => o.id === selectedWinner)?.label || 'Desconhecido',
+        winnerLabel: selectedWinner === 'tie' ? 'Tie' : 
+                    selectedWinner === 'undefined' ? 'Undefined' :
+                    comparisonOptions.find(o => o.id === selectedWinner)?.label || 'Unknown',
         confidence: newConfidence,
         reasoning: reasoning.trim(),
         timestamp: new Date().toISOString()
@@ -144,9 +144,9 @@ export default function ComparisonView({
       const result: ComparisonResult = {
         rowId: comparisonRow.id,
         winnerId: selectedWinner,
-        winnerLabel: selectedWinner === 'tie' ? 'Empate' : 
-                    selectedWinner === 'undefined' ? 'Não definido' :
-                    comparisonOptions.find(o => o.id === selectedWinner)?.label || 'Desconhecido',
+        winnerLabel: selectedWinner === 'tie' ? 'Tie' : 
+                    selectedWinner === 'undefined' ? 'Undefined' :
+                    comparisonOptions.find(o => o.id === selectedWinner)?.label || 'Unknown',
         confidence,
         reasoning: newReasoning.trim(),
         timestamp: new Date().toISOString()
@@ -170,7 +170,7 @@ export default function ComparisonView({
     const newLabel = tempLabel.trim();
     if (newLabel && onLabelChange) {
       onLabelChange(comparisonRow.id, optionId, newLabel);
-      console.log(`📝 Label do modelo ${optionId} alterado para: ${newLabel}`);
+      console.log(`📝 Model ${optionId} label changed to: ${newLabel}`);
     }
     
     setEditingLabel(null);
@@ -178,8 +178,8 @@ export default function ComparisonView({
   };
 
   const getConfidenceLabel = (level: number): string => {
-    const labels = ['Muito baixa', 'Baixa', 'Média', 'Alta', 'Muito alta'];
-    return labels[level - 1] || 'Média';
+    const labels = ['Very low', 'Low', 'Medium', 'High', 'Very high'];
+    return labels[level - 1] || 'Medium';
   };
 
   const getConfidenceColor = (level: number): string => {
@@ -189,16 +189,16 @@ export default function ComparisonView({
   };
 
   const renderSuggestionPreview = (output: ComparisonOutput & { id: string }) => {
-    console.log('renderSuggestionPreview chamado com output:', output);
+    console.log('renderSuggestionPreview called with output:', output);
     console.log('output.parsed:', output.parsed);
     
-    // Se não há dados parseados ou tem erro, mostrar fallback
+    // If there's no parsed data or there's an error, show fallback
     if (!output.parsed || (output.parsed as any).fallback) {
       let displayOutput = '';
       let errorInfo = '';
       
       if ((output.parsed as any)?.fallback) {
-        errorInfo = (output.parsed as any).errorMessage || 'Erro no processamento';
+        errorInfo = (output.parsed as any).errorMessage || 'Error in processing';
       }
       
       try {
@@ -210,7 +210,7 @@ export default function ComparisonView({
           displayOutput = String(output.output).substring(0, 300) + '...';
         }
       } catch (e) {
-        displayOutput = 'Erro ao exibir conteúdo: ' + String(e);
+        displayOutput = 'Error displaying content: ' + String(e);
       }
       
       return (
@@ -218,14 +218,14 @@ export default function ComparisonView({
           <div className="bg-red-50 border-b border-red-200 px-4 py-3">
             <div className="flex items-center space-x-2">
               <AlertTriangle className="w-4 h-4 text-red-500" />
-              <span className="font-medium text-red-800">Dados com problema</span>
+              <span className="font-medium text-red-800">Problematic data</span>
             </div>
             {errorInfo && (
               <p className="text-red-700 text-sm mt-1">{errorInfo}</p>
             )}
           </div>
           <div className="p-4 bg-gray-50">
-            <p className="text-gray-600 text-sm mb-2">Conteúdo original (limitado):</p>
+            <p className="text-gray-600 text-sm mb-2">Original content (limited):</p>
             <pre className="text-xs text-gray-500 overflow-x-auto whitespace-pre-wrap font-mono">
               {displayOutput}
             </pre>
@@ -234,31 +234,31 @@ export default function ComparisonView({
       );
     }
 
-    // Se não há codeSuggestions, mostrar info básica
+    // If there are no codeSuggestions, show basic info
     if (!output.parsed.codeSuggestions || output.parsed.codeSuggestions.length === 0) {
       return (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
             <div className="flex items-center space-x-2">
               <FileText className="w-4 h-4 text-gray-500" />
-              <span className="font-medium text-gray-700">Sem sugestões específicas</span>
+              <span className="font-medium text-gray-700">No specific suggestions</span>
             </div>
           </div>
           <div className="p-4">
-            <p className="text-gray-600 text-sm mb-2">Resumo geral:</p>
+            <p className="text-gray-600 text-sm mb-2">Overall summary:</p>
             <p className="text-gray-800 text-sm leading-relaxed">
-              {output.parsed.overallSummary || 'Nenhum resumo disponível'}
+              {output.parsed.overallSummary || 'No summary available'}
             </p>
           </div>
         </div>
       );
     }
 
-    // Renderizar com o componente GitHubStyle sem onSelect (usamos os botões centralizados)
+    // Render with GitHubStyle component without onSelect (we use centralized buttons)
     return (
       <GitHubStyleSuggestion
         suggestion={output.parsed}
-        title={output.label || 'Sugestão'}
+        title={output.label || 'Suggestion'}
         isSelected={selectedWinner === output.id}
       />
     );
@@ -282,7 +282,7 @@ export default function ComparisonView({
               <div className="flex items-center space-x-2 text-sm">
                 <Crown className="w-4 h-4 text-yellow-500" />
                 <span className="font-medium text-gray-700">
-                  Resultado salvo: {existingResult.winnerLabel}
+                  Saved result: {existingResult.winnerLabel}
                 </span>
               </div>
             )}
@@ -299,24 +299,24 @@ export default function ComparisonView({
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center space-x-3 mb-3">
             <GitPullRequest className="w-5 h-5 text-blue-600" />
-            <h3 className="font-medium text-blue-900">Contexto do Código</h3>
+            <h3 className="font-medium text-blue-900">Code Context</h3>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <FileText className="w-4 h-4 text-blue-600" />
-                <span className="font-medium text-blue-800">Arquivo:</span>
+                <span className="font-medium text-blue-800">File:</span>
                 <code className="bg-blue-100 px-2 py-1 rounded text-blue-900 font-mono text-xs">
-                  {comparisonRow.inputs.filePath || 'Não especificado'}
+                  {comparisonRow.inputs.filePath || 'Not specified'}
                 </code>
               </div>
               
               <div className="flex items-center space-x-2">
                 <span className="w-4 h-4 text-blue-600">🔧</span>
-                <span className="font-medium text-blue-800">Linguagem:</span>
+                <span className="font-medium text-blue-800">Language:</span>
                 <span className="bg-blue-100 px-2 py-1 rounded text-blue-900 text-xs">
-                  {comparisonRow.inputs.language || 'Não especificado'}
+                  {comparisonRow.inputs.language || 'Not specified'}
                 </span>
               </div>
             </div>
@@ -335,7 +335,7 @@ export default function ComparisonView({
             {comparisonRow.inputs.description && (
               <div className="md:col-span-2">
                 <div className="flex items-start space-x-2">
-                  <span className="font-medium text-blue-800">Descrição:</span>
+                  <span className="font-medium text-blue-800">Description:</span>
                   <span className="text-blue-700">
                     {comparisonRow.inputs.description}
                   </span>
@@ -351,7 +351,7 @@ export default function ComparisonView({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <h3 className="text-lg font-semibold text-gray-900">
-              Escolha a melhor sugestão:
+              Choose the best suggestion:
             </h3>
             <span className={clsx(
               "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium",
@@ -359,16 +359,16 @@ export default function ComparisonView({
               comparisonOptions.length > 4 ? "bg-yellow-100 text-yellow-800" :
               "bg-blue-100 text-blue-800"
             )}>
-              {comparisonOptions.length} modelo{comparisonOptions.length !== 1 ? 's' : ''} em comparação
+              {comparisonOptions.length} model{comparisonOptions.length !== 1 ? 's' : ''} in comparison
               {comparisonOptions.length > 6 && " ⚠️"}
             </span>
           </div>
           <div className="flex items-center text-sm text-gray-500">
             <Edit2 className="w-4 h-4 mr-1" />
-            <span>💡 Renomeie os modelos (ex: GPT-4, Claude) - vale para todas as comparações</span>
+            <span>💡 Rename models (e.g., GPT-4, Claude) - applies to all comparisons</span>
             {Object.keys(savedLabels).length > 0 && (
               <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                {Object.keys(savedLabels).length} personalizado{Object.keys(savedLabels).length !== 1 ? 's' : ''}
+                {Object.keys(savedLabels).length} customized
               </span>
             )}
           </div>
@@ -395,19 +395,19 @@ export default function ComparisonView({
                         }}
                         className="px-2 py-1 border border-blue-300 rounded text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
                         autoFocus
-                        placeholder="Nome do modelo"
+                        placeholder="Enter model name..."
                       />
                       <button
                         onClick={() => saveLabel(option.id)}
                         className="p-1 text-green-600 hover:text-green-800"
-                        title="Salvar"
+                        title="Save"
                       >
                         <Check className="w-4 h-4" />
                       </button>
                       <button
                         onClick={cancelEditingLabel}
                         className="p-1 text-red-600 hover:text-red-800"
-                        title="Cancelar"
+                        title="Cancel"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -415,9 +415,9 @@ export default function ComparisonView({
                   ) : (
                     <div className="flex items-center space-x-2 group">
                       <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                        <span>{option.label || 'Sem Label'}</span>
+                        <span>{option.label || 'No Label'}</span>
                         {savedLabels[option.id] && (
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" title="Nome personalizado">
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full" title="Custom name">
                             ✏️
                           </span>
                         )}
@@ -428,7 +428,7 @@ export default function ComparisonView({
                       <button
                         onClick={() => startEditingLabel(option.id, option.label || '')}
                         className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-600 transition-opacity"
-                        title="Renomear modelo"
+                        title="Rename model"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
@@ -439,7 +439,7 @@ export default function ComparisonView({
                 {selectedWinner === option.id && (
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                     <Crown className="w-4 h-4 mr-1" />
-                    Vencedor
+                    Winner
                   </span>
                 )}
               </div>
@@ -447,8 +447,8 @@ export default function ComparisonView({
               {/* Renderizar sem botão de seleção individual */}
               <div>
                 <GitHubStyleSuggestion
-                  suggestion={option.parsed || { overallSummary: 'Erro de processamento', codeSuggestions: [] }}
-                  title={option.label || 'Sugestão'}
+                  suggestion={option.parsed || { overallSummary: 'Processing error', codeSuggestions: [] }}
+                  title={option.label || 'Suggestion'}
                   isSelected={selectedWinner === option.id}
                   // Remover onSelect para usar apenas os botões centralizados
                 />
@@ -470,13 +470,13 @@ export default function ComparisonView({
                 {selectedWinner === 'tie' && (
                   <>
                     <div className="w-4 h-4 rounded-full border-2 border-yellow-600 bg-yellow-200 mr-2"></div>
-                    Resultado: Empate
+                    Result: Tie
                   </>
                 )}
                 {selectedWinner === 'undefined' && (
                   <>
                     <div className="w-4 h-4 rounded border border-gray-600 bg-gray-200 mr-2"></div>
-                    Resultado: Não definido
+                    Result: Not defined
                   </>
                 )}
                 {selectedWinner !== 'tie' && selectedWinner !== 'undefined' && (
@@ -493,9 +493,9 @@ export default function ComparisonView({
         {/* Opções de resultado */}
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h4 className="text-sm font-medium text-gray-700 mb-4">
-            {selectedWinner ? 'Alterar resultado:' : 'Resultado da comparação:'} 
+            {selectedWinner ? 'Change result:' : 'Comparison result:'} 
             <span className="text-xs text-gray-500 ml-2">
-              ({comparisonOptions.length} modelo{comparisonOptions.length !== 1 ? 's' : ''} + empate/indefinido)
+              ({comparisonOptions.length} model{comparisonOptions.length !== 1 ? 's' : ''} + tie/undefined)
             </span>
           </h4>
           
@@ -503,8 +503,8 @@ export default function ComparisonView({
             <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
               <div className="flex items-center space-x-2 text-sm text-orange-800">
                 <span>⚠️</span>
-                <span className="font-medium">Muitos modelos detectados!</span>
-                <span>O layout foi ajustado automaticamente para {comparisonOptions.length} opções.</span>
+                <span className="font-medium">Too many models detected!</span>
+                <span>Layout has been automatically adjusted for {comparisonOptions.length} options.</span>
               </div>
             </div>
           )}

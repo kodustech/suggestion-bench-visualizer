@@ -80,7 +80,7 @@ export default function SuggestionCard({
       return 'info';
     }
     
-    // Labels específicos comuns no contexto de code review
+    // Common specific labels in the code review context
     const severityMap: { [key: string]: string } = {
       'refactoring': 'info',
       'optimization': 'warning',
@@ -114,7 +114,7 @@ export default function SuggestionCard({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <span className="text-sm font-medium text-gray-500">
-              Sugestão {index + 1} de {total}
+              Suggestion {index + 1} of {total}
             </span>
             {suggestion.label && (() => {
               const severity = suggestion.severity || inferSeverityFromLabel(suggestion.label);
@@ -131,7 +131,7 @@ export default function SuggestionCard({
             <FileText className="w-4 h-4" />
             <span>{suggestion.relevantFile}</span>
             <span>•</span>
-            <span>Linhas {suggestion.relevantLinesStart}-{suggestion.relevantLinesEnd}</span>
+            <span>Lines {suggestion.relevantLinesStart}-{suggestion.relevantLinesEnd}</span>
           </div>
         </div>
         
@@ -159,7 +159,7 @@ export default function SuggestionCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <span className="text-sm font-medium text-gray-700">
-              Esta sugestão é útil?
+              Is this suggestion helpful?
             </span>
             <div className="flex items-center space-x-2">
               <button
@@ -172,7 +172,7 @@ export default function SuggestionCard({
                 )}
               >
                 <ThumbsUp className="w-4 h-4 mr-1" />
-                Aprovar
+                Approve
               </button>
               <button
                 onClick={() => handleFeedback(false)}
@@ -184,7 +184,7 @@ export default function SuggestionCard({
                 )}
               >
                 <ThumbsDown className="w-4 h-4 mr-1" />
-                Rejeitar
+                Reject
               </button>
             </div>
           </div>
@@ -193,7 +193,7 @@ export default function SuggestionCard({
             onClick={() => setShowComment(!showComment)}
             className="text-sm text-blue-600 hover:text-blue-800 font-medium"
           >
-            {showComment ? 'Ocultar comentário' : 'Adicionar comentário'}
+            {showComment ? 'Hide comment' : 'Add comment'}
           </button>
         </div>
 
@@ -202,7 +202,7 @@ export default function SuggestionCard({
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Adicione um comentário sobre esta sugestão..."
+              placeholder="Add a comment about this suggestion..."
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={3}
             />

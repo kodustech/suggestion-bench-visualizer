@@ -70,10 +70,10 @@ export default function CodeDiff({ oldCode, newCode, language }: CodeDiffProps) 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
       <div className="grid grid-cols-2">
-        {/* Código Antigo */}
+        {/* Old Code */}
         <div className="border-r border-gray-200">
           <div className="bg-red-50 px-4 py-2 border-b border-gray-200">
-            <span className="text-red-700 font-medium">Código Existente</span>
+            <span className="text-red-700 font-medium">Existing Code</span>
           </div>
           <div className="flex bg-gray-50">
             <div className="flex flex-col bg-gray-100 border-r border-gray-200 min-w-[60px]">
@@ -85,10 +85,10 @@ export default function CodeDiff({ oldCode, newCode, language }: CodeDiffProps) 
           </div>
         </div>
 
-        {/* Código Novo */}
+        {/* New Code */}
         <div>
           <div className="bg-green-50 px-4 py-2 border-b border-gray-200">
-            <span className="text-green-700 font-medium">Código Melhorado</span>
+            <span className="text-green-700 font-medium">Improved Code</span>
           </div>
           <div className="flex bg-gray-50">
             <div className="flex flex-col bg-gray-100 border-r border-gray-200 min-w-[60px]">

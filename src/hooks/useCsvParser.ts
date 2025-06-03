@@ -6,183 +6,183 @@ export function useCsvParser() {
   const [error, setError] = useState<string | null>(null);
 
   const parseJsonSafely = (data: any): SuggestionData | undefined => {
-    console.log('parseJsonSafely iniciado com dados:', typeof data, data && typeof data === 'object' ? 'objeto' : (typeof data === 'string' ? data.substring(0, 100) + '...' : String(data)));
+    console.log('parseJsonSafely started with data:', typeof data, data && typeof data === 'object' ? 'object' : (typeof data === 'string' ? data.substring(0, 100) + '...' : String(data)));
     
-    // Log adicional para objetos
+    // Additional log for objects
     if (typeof data === 'object' && data !== null) {
-      console.log('🔍 parseJsonSafely: Campos do objeto:', Object.keys(data));
-      console.log('🔍 parseJsonSafely: Tem content?', 'content' in data);
-      console.log('🔍 parseJsonSafely: Tem codeSuggestions?', 'codeSuggestions' in data);
+      console.log('🔍 parseJsonSafely: Object fields:', Object.keys(data));
+      console.log('🔍 parseJsonSafely: Has content?', 'content' in data);
+      console.log('🔍 parseJsonSafely: Has codeSuggestions?', 'codeSuggestions' in data);
       if (data.content) {
-        console.log('🔍 parseJsonSafely: Tipo do content:', typeof data.content);
-        console.log('🔍 parseJsonSafely: Content inclui ```json?', data.content.includes && data.content.includes('```json'));
+        console.log('🔍 parseJsonSafely: Content type:', typeof data.content);
+        console.log('🔍 parseJsonSafely: Content includes ```json?', data.content.includes && data.content.includes('```json'));
       }
     }
     
     try {
-      // Se já é um objeto válido com codeSuggestions, retornar diretamente
+      // If it's already a valid object with codeSuggestions, return directly
       if (typeof data === 'object' && data !== null && data.codeSuggestions) {
-        console.log('✅ parseJsonSafely: dados já são um objeto válido com codeSuggestions');
+        console.log('✅ parseJsonSafely: data already is a valid object with codeSuggestions');
         return data as SuggestionData;
       }
 
-      // Se é um objeto com campo 'content' (estrutura de resposta de IA), extrair o content
+      // If it's an object with 'content' field (IA response structure), extract the content
       if (typeof data === 'object' && data !== null && data.content) {
-        console.log('🔧 parseJsonSafely: objeto tem campo content, extraindo...');
-        console.log('🔍 Tipo do campo content:', typeof data.content);
-        console.log('🔍 Amostra do content:', typeof data.content === 'string' ? data.content.substring(0, 150) + '...' : data.content);
+        console.log('🔧 parseJsonSafely: object has content field, extracting...');
+        console.log('🔍 Content field type:', typeof data.content);
+        console.log('🔍 Content sample:', typeof data.content === 'string' ? data.content.substring(0, 150) + '...' : data.content);
         
-        // Se content é uma string que parece ter markdown, processar especialmente
+        // If content is a string that looks like markdown, process specially
         if (typeof data.content === 'string' && data.content.includes('```json')) {
-          console.log('🎯 parseJsonSafely: content contém bloco markdown, processando...');
+          console.log('🎯 parseJsonSafely: content contains markdown block, processing...');
           
-          // Extrair JSON do bloco markdown
+          // Extract JSON from markdown block
           const jsonMatch = data.content.match(/```json\n([\s\S]*?)\n```/);
           if (jsonMatch) {
             const extractedJson = jsonMatch[1];
-                         console.log('📋 parseJsonSafely: JSON extraído do content:', extractedJson.substring(0, 200) + '...');
+                         console.log('📋 parseJsonSafely: JSON extracted from content:', extractedJson.substring(0, 200) + '...');
              
-             // Debug específico para as posições problemáticas
+             // Specific debug for problematic positions
              if (extractedJson.length > 1623) {
-               console.log('🔍 Debug posição 1576:', {
+               console.log('🔍 Debug position 1576:', {
                  char: extractedJson.charAt(1575),
                  charCode: extractedJson.charCodeAt(1575),
                  context: extractedJson.substring(1570, 1580)
                });
-               console.log('🔍 Debug posição 1623:', {
+               console.log('🔍 Debug position 1623:', {
                  char: extractedJson.charAt(1622),
                  charCode: extractedJson.charCodeAt(1622),
                  context: extractedJson.substring(1618, 1628)
                });
              }
             
-                         // Aplicar estratégias de limpeza no JSON extraído
+                         // Apply cleaning strategies on extracted JSON
              const cleaningStrategies = [
                {
-                 name: 'Parse direto',
+                 name: 'Parse directly',
                  clean: (str: string) => str
                },
                {
-                 name: 'Remove caracteres de controle',
+                 name: 'Remove control characters',
                  clean: (str: string) => str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
                },
                {
-                 name: 'Limpa template literals problemáticos',
+                 name: 'Clean problematic template literals',
                  clean: (str: string) => {
-                   // Substitui template literals aninhados por strings simples
+                   // Replace nested template literals with simple strings
                    return str
                      .replace(/\$\{[^}]*\}/g, '"TEMPLATE_LITERAL"')
                      .replace(/`/g, '"');
                  }
                },
                {
-                 name: 'Corrige barras invertidas + backticks específicas',
+                 name: 'Fix backslashes + specific backticks',
                  clean: (str: string) => {
                    return str
-                     // Remove caracteres de controle primeiro
+                     // Remove control characters first
                      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-                     // Corrige especificamente \\` (barra + backtick)
+                     // Fix specifically \\` (backslash + backtick)
                      .replace(/\\`/g, '`')
-                     // Corrige outras sequências problemáticas com backticks
+                     // Fix other problematic sequences with backticks
                      .replace(/\\\\`/g, '`')
                      .replace(/\\\\\\\\/g, '\\\\')
-                     // Normaliza template literals 
+                     // Normalize template literals 
                      .replace(/`([^`]*)`/g, '"$1"')
-                     // Substitui ${...} expressions
+                     // Replace ${...} expressions
                      .replace(/\$\{[^}]*\}/g, 'EXPR')
-                     // Normaliza aspas
+                     // Normalize quotes
                      .replace(/\\"/g, '"');
                  }
                },
                {
-                 name: 'Normaliza escapes múltiplos',
+                 name: 'Normalize multiple escapes',
                  clean: (str: string) => {
                    return str
-                     // Remove caracteres de controle primeiro
+                     // Remove control characters first
                      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-                     // Primeiro normaliza escapes excessivos
-                     .replace(/\\\\\\\\/g, '\\\\') // Reduz \\\\ para \\
-                     .replace(/\\\\"/g, '\\"')     // Reduz \\" para \"
-                     // Depois aplica escape normal
+                     // First normalize excessive escapes
+                     .replace(/\\\\\\\\/g, '\\\\') // Reduce \\\\ to \\
+                     .replace(/\\\\"/g, '\\"')     // Reduce \\" to \"
+                     // Then apply normal escape
                      .replace(/\\"/g, '"');
                  }
                },
                {
-                 name: 'Sanitização agressiva para código complexo',
+                 name: 'Aggressive sanitization for complex code',
                  clean: (str: string) => {
                    return str
-                     // Remove caracteres de controle
+                     // Remove control characters
                      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
-                     // Substitui template literals por placeholders
+                     // Replace template literals with placeholders
                      .replace(/\$\{[^}]*\}/g, 'PLACEHOLDER')
                      .replace(/`([^`]*)`/g, '"$1"')
-                     // Normaliza escapes
+                     // Normalize escapes
                      .replace(/\\\\\\\\/g, '\\\\')
                      .replace(/\\\\"/g, '\\"')
                      .replace(/\\"/g, '"')
-                     .replace(/\\n/g, '\\n') // Mantém como escape literal
+                     .replace(/\\n/g, '\\n') // Keep as literal escape
                      .replace(/\\r/g, '\\r')
                      .replace(/\\t/g, '\\t');
                  }
                },
                {
-                 name: 'Escape completo - converte tudo para texto',
+                 name: 'Complete escape - convert everything to text',
                  clean: (str: string) => {
                    return str
-                     // Remove caracteres problemáticos primeiro
+                     // Remove problematic characters first
                      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ' ')
-                     // Converte quebras de linha para espaços
+                     // Convert line breaks to spaces
                      .replace(/\\n/g, ' ')
                      .replace(/\\r/g, ' ')
                      .replace(/\\t/g, ' ')
                      // Remove template literals
                      .replace(/\$\{[^}]*\}/g, ' ')
                      .replace(/`/g, '"')
-                     // Normaliza escapes
+                     // Normalize escapes
                      .replace(/\\\\/g, '\\')
                      .replace(/\\"/g, '"')
-                     // Remove espaços múltiplos
+                     // Remove multiple spaces
                      .replace(/\s+/g, ' ');
                  }
                },
                {
-                 name: 'Parse com remoção total de caracteres problemáticos',
+                 name: 'Parse with total removal of problematic characters',
                  clean: (str: string) => {
                    return str
-                     // Estratégia mais agressiva - remove tudo que pode causar problema
-                     .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove todos os caracteres de controle
+                     // Most aggressive strategy - remove everything that could cause problems
+                     .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove all control characters
                      .replace(/\\u[0-9a-fA-F]{4}/g, '') // Remove unicode escapes
-                     .replace(/\$\{[^}]*\}/g, 'TEMPLATE') // Substitui template literals
-                     .replace(/`[^`]*`/g, '"STRING"') // Substitui template strings
-                     .replace(/\\\\/g, '\\') // Normaliza barras
-                     .replace(/\\"/g, '"') // Normaliza aspas
-                     .replace(/\s+/g, ' ') // Normaliza espaços
+                     .replace(/\$\{[^}]*\}/g, 'TEMPLATE') // Replace template literals
+                     .replace(/`[^`]*`/g, '"STRING"') // Replace template strings
+                     .replace(/\\\\/g, '\\') // Normalize backslashes
+                     .replace(/\\"/g, '"') // Normalize quotes
+                     .replace(/\s+/g, ' ') // Normalize spaces
                      .trim();
                  }
                },
                {
-                 name: 'Remoção byte-por-byte de caracteres problemáticos',
+                 name: 'Byte-by-byte removal of problematic characters',
                  clean: (str: string) => {
                    let cleaned = '';
                    for (let i = 0; i < str.length; i++) {
                      const char = str[i];
                      const code = str.charCodeAt(i);
                      
-                     // Remove caracteres de controle específicos
+                     // Remove specific control characters
                      if (code >= 32 && code <= 126) {
-                       // ASCII printável
+                       // Printable ASCII
                        cleaned += char;
                      } else if (code === 10 || code === 13 || code === 9) {
-                       // Quebra de linha, carriage return, tab - manter mas normalizar
+                       // Line break, carriage return, tab - keep but normalize
                        cleaned += ' ';
                      } else if (code > 127) {
-                       // Unicode válido - manter
+                       // Valid Unicode - keep
                        cleaned += char;
                      }
-                     // Ignora outros caracteres de controle
+                     // Ignore other control characters
                    }
                    
-                   // Normaliza escapes
+                   // Normalize escapes
                    return cleaned
                      .replace(/\s+/g, ' ')
                      .replace(/\\"/g, '"')
@@ -190,136 +190,136 @@ export function useCsvParser() {
                      .trim();
                  }
                },
-                                {
-                   name: 'Estratégia de recuperação parcial',
-                   clean: (str: string) => {
-                     // Se tudo falhar, pelo menos tenta extrair o que conseguir
+               {
+                 name: 'Partial recovery strategy',
+                 clean: (str: string) => {
+                   // If everything fails, at least try to extract what we can
+                   try {
+                     let result: any = {
+                       overallSummary: "Error processing content",
+                       codeSuggestions: []
+                     };
+                     
+                     // Try to extract overallSummary
+                     const summaryMatch = str.match(/"overallSummary":\s*"([^"]+)"/);
+                     if (summaryMatch) {
+                       result.overallSummary = summaryMatch[1];
+                     }
+                     
+                     // Try to extract codeSuggestions more robustly
                      try {
-                       let result: any = {
-                         overallSummary: "Erro ao processar conteúdo",
-                         codeSuggestions: []
-                       };
+                       // Look for codeSuggestions patterns even if not perfect JSON
+                       const suggestionsPattern = /"codeSuggestions":\s*\[\s*({[\s\S]*?})\s*\]/;
+                       const suggestionsMatch = str.match(suggestionsPattern);
                        
-                       // Tenta extrair overallSummary
-                       const summaryMatch = str.match(/"overallSummary":\s*"([^"]+)"/);
-                       if (summaryMatch) {
-                         result.overallSummary = summaryMatch[1];
-                       }
-                       
-                       // Tenta extrair codeSuggestions de forma mais robusta
-                       try {
-                         // Procura por padrões de codeSuggestions mesmo que não seja JSON perfeito
-                         const suggestionsPattern = /"codeSuggestions":\s*\[\s*({[\s\S]*?})\s*\]/;
-                         const suggestionsMatch = str.match(suggestionsPattern);
+                       if (suggestionsMatch) {
+                         // Try to clean and parse the first suggestion
+                         let suggestionStr = suggestionsMatch[1];
                          
-                         if (suggestionsMatch) {
-                           // Tenta limpar e parsear a primeira sugestão
-                           let suggestionStr = suggestionsMatch[1];
+                         // Basic cleaning
+                         suggestionStr = suggestionStr
+                           .replace(/\\`/g, '`')
+                           .replace(/\\"/g, '"')
+                           .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
                            
-                           // Limpeza básica
-                           suggestionStr = suggestionStr
-                             .replace(/\\`/g, '`')
-                             .replace(/\\"/g, '"')
-                             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+                         try {
+                           const suggestion = JSON.parse(suggestionStr);
+                           result.codeSuggestions = [suggestion];
+                         } catch (parseError) {
+                           // If parsing fails, at least extract basic fields
+                           const fileMatch = suggestionStr.match(/"relevantFile":\s*"([^"]+)"/);
+                           const contentMatch = suggestionStr.match(/"suggestionContent":\s*"([^"]+)"/);
+                           const summaryMatch = suggestionStr.match(/"oneSentenceSummary":\s*"([^"]+)"/);
                            
-                           try {
-                             const suggestion = JSON.parse(suggestionStr);
-                             result.codeSuggestions = [suggestion];
-                           } catch (parseError) {
-                             // Se não conseguir parsear, pelo menos extrai campos básicos
-                             const fileMatch = suggestionStr.match(/"relevantFile":\s*"([^"]+)"/);
-                             const contentMatch = suggestionStr.match(/"suggestionContent":\s*"([^"]+)"/);
-                             const summaryMatch = suggestionStr.match(/"oneSentenceSummary":\s*"([^"]+)"/);
-                             
-                             if (fileMatch || contentMatch) {
-                               result.codeSuggestions = [{
-                                 relevantFile: fileMatch ? fileMatch[1] : "unknown",
-                                 suggestionContent: contentMatch ? contentMatch[1].substring(0, 200) + "..." : "Conteúdo não extraível",
-                                 oneSentenceSummary: summaryMatch ? summaryMatch[1] : "Resumo não disponível",
-                                 label: "extracted_partial"
-                               }];
-                             }
+                           if (fileMatch || contentMatch) {
+                             result.codeSuggestions = [{
+                               relevantFile: fileMatch ? fileMatch[1] : "unknown",
+                               suggestionContent: contentMatch ? contentMatch[1].substring(0, 200) + "..." : "Content not extractable",
+                               oneSentenceSummary: summaryMatch ? summaryMatch[1] : "Summary not available",
+                               label: "extracted_partial"
+                             }];
                            }
                          }
-                       } catch (e) {
-                         // Continua com codeSuggestions vazio
                        }
-                       
-                       return JSON.stringify(result);
                      } catch (e) {
-                       // Se mesmo isso falhar, retorna estrutura mínima
-                       return JSON.stringify({
-                         overallSummary: "Erro ao processar conteúdo",
-                         codeSuggestions: []
-                       });
+                       // Continue with empty codeSuggestions
                      }
+                     
+                     return JSON.stringify(result);
+                   } catch (e) {
+                     // If even this fails, return minimal fallback structure
+                     return JSON.stringify({
+                       overallSummary: "Error processing content",
+                       codeSuggestions: []
+                     });
                    }
                  }
+               }
              ];
             
             for (const strategy of cleaningStrategies) {
               try {
                 const cleanedJson = strategy.clean(extractedJson);
                 const result = JSON.parse(cleanedJson);
-                console.log(`✅ parseJsonSafely: estratégia "${strategy.name}" funcionou para content markdown`);
+                console.log(`✅ parseJsonSafely: strategy "${strategy.name}" worked for content markdown`);
                 if (result && result.codeSuggestions) {
-                  console.log(`🎯 parseJsonSafely: encontrado ${result.codeSuggestions.length} codeSuggestions no content`);
+                  console.log(`🎯 parseJsonSafely: found ${result.codeSuggestions.length} codeSuggestions in content`);
                 }
                 return result;
               } catch (e) {
-                console.log(`❌ parseJsonSafely: estratégia "${strategy.name}" falhou para content:`, (e as Error).message.substring(0, 100));
+                console.log(`❌ parseJsonSafely: strategy "${strategy.name}" failed for content:`, (e as Error).message.substring(0, 100));
               }
             }
             
-            console.warn('⚠️ parseJsonSafely: todas as estratégias falharam para content markdown');
+            console.warn('⚠️ parseJsonSafely: all strategies failed for content markdown');
           }
         }
         
-        // Recursivamente processar o content (caso não seja markdown)
+        // Recursively process the content (if not markdown)
         return parseJsonSafely(data.content);
       }
 
-      // Se é um objeto mas não tem codeSuggestions nem content, tentar JSON.stringify e re-parse
+      // If it's an object but doesn't have codeSuggestions or content, try JSON.stringify and re-parse
       if (typeof data === 'object' && data !== null) {
-        console.log('🔄 parseJsonSafely: objeto sem content/codeSuggestions, tentando stringify...');
+        console.log('🔄 parseJsonSafely: object without content/codeSuggestions, trying stringify...');
         try {
           const stringified = JSON.stringify(data);
-          console.log('🔧 parseJsonSafely: objeto stringificado, tentando re-parse...');
+          console.log('🔧 parseJsonSafely: object stringified, trying re-parse...');
           return parseJsonSafely(stringified);
         } catch (stringifyError) {
-          console.log('❌ parseJsonSafely: falha ao stringificar objeto');
+          console.log('❌ parseJsonSafely: failed to stringify object');
           return undefined;
         }
       }
 
-      // Se não é string, converter para string
+      // If it's not a string, convert to string
       if (typeof data !== 'string') {
-        console.log('🔄 parseJsonSafely: convertendo para string (tipo:', typeof data, ')');
+        console.log('🔄 parseJsonSafely: converting to string (type:', typeof data, ')');
         data = String(data);
       }
 
       const jsonString = data as string;
       
-      // Estratégias de limpeza e parsing
+      // Cleaning and parsing strategies
       const cleaningStrategies = [
         {
-          name: 'Parse direto',
+          name: 'Parse directly',
           clean: (str: string) => str.trim()
         },
         {
-          name: 'Remove escapes de quebra de linha',
+          name: 'Remove line break escapes',
           clean: (str: string) => str.trim().replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t')
         },
         {
-          name: 'Remove escape duplo',
+          name: 'Remove double escape',
           clean: (str: string) => str.trim().replace(/\\"/g, '"')
         },
         {
-          name: 'Combinado: escapes de quebra + aspas',
+          name: 'Combined: line break + quotes',
           clean: (str: string) => str.trim().replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t').replace(/\\"/g, '"')
         },
         {
-          name: 'Remove todos os escapes',
+          name: 'Remove all escapes',
           clean: (str: string) => str.trim()
             .replace(/\\n/g, '\n')
             .replace(/\\r/g, '\r') 
@@ -333,67 +333,67 @@ export function useCsvParser() {
         try {
           const cleanedString = strategy.clean(jsonString);
           const parsed = JSON.parse(cleanedString);
-          console.log(`✅ parseJsonSafely: "${strategy.name}" funcionou`);
+          console.log(`✅ parseJsonSafely: "${strategy.name}" worked`);
           
-          // Verificar se tem codeSuggestions
+          // Check if there are codeSuggestions
           if (parsed && parsed.codeSuggestions) {
-            console.log(`🎯 parseJsonSafely: encontrado codeSuggestions com ${parsed.codeSuggestions.length} itens`);
+            console.log(`🎯 parseJsonSafely: found codeSuggestions with ${parsed.codeSuggestions.length} items`);
             return parsed as SuggestionData;
           } else {
-            console.log(`⚠️ parseJsonSafely: JSON parseado mas sem codeSuggestions:`, Object.keys(parsed || {}));
+            console.log(`⚠️ parseJsonSafely: JSON parsed but without codeSuggestions:`, Object.keys(parsed || {}));
           }
           
           return parsed;
         } catch (e) {
-          console.log(`❌ parseJsonSafely: "${strategy.name}" falhou:`, (e as Error).message.substring(0, 50));
+          console.log(`❌ parseJsonSafely: "${strategy.name}" failed:`, (e as Error).message.substring(0, 50));
         }
       }
       
-      // Se tem blocos de código markdown
+      // If there are markdown code blocks
       if (jsonString.includes('```json')) {
         const jsonMatch = jsonString.match(/```json\n([\s\S]*?)\n```/);
         if (jsonMatch) {
-          console.log('JSON extraído de bloco markdown');
+          console.log('JSON extracted from markdown block');
           let extractedJson = jsonMatch[1];
-          console.log('🔍 JSON extraído (primeiros 200 chars):', extractedJson.substring(0, 200));
+          console.log('🔍 JSON extracted (first 200 chars):', extractedJson.substring(0, 200));
           
-          // Aplicar limpeza de escapes no JSON extraído
+          // Apply escapes cleaning to the extracted JSON
           try {
-            // Tentar parse direto primeiro
+            // Try direct parse first
             return JSON.parse(extractedJson);
           } catch (directError) {
-            console.log('❌ Parse direto do JSON extraído falhou, tentando limpeza de escapes...');
+            console.log('❌ Direct JSON parse failed, trying escapes cleaning...');
             
-                         // Aplicar as mesmas estratégias de limpeza
+                         // Apply the same cleaning strategies
              const cleaningStrategies = [
                {
-                 name: 'Remove escapes de quebra de linha',
+                 name: 'Remove line break escapes',
                  clean: (str: string) => str.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t')
                },
                {
-                 name: 'Remove escape duplo de aspas',
+                 name: 'Remove double escape from quotes',
                  clean: (str: string) => str.replace(/\\"/g, '"')
                },
                {
-                 name: 'Remove caracteres de controle problemáticos',
+                 name: 'Remove problematic control characters',
                  clean: (str: string) => {
-                   // Remove caracteres de controle ASCII (0-31, exceto tab, newline, carriage return que são válidos)
+                   // Remove problematic ASCII characters (0-31, except tab, newline, carriage return which are valid)
                    return str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
                  }
                },
                {
-                 name: 'Sanitiza escapes problemáticos',
+                 name: 'Sanitize problematic escapes',
                  clean: (str: string) => str
-                   // Corrige sequências de escape problemáticas
-                   .replace(/\\(?!["\\/bfnrt])/g, '\\\\') // Adiciona escape para barras não seguidas por chars válidos
-                   .replace(/\\\\\\\\/g, '\\\\') // Corrige escape excessivo de barras
+                   // Fix problematic escape sequences
+                   .replace(/\\(?!["\\/bfnrt])/g, '\\\\') // Add escape for bars not followed by valid chars
+                   .replace(/\\\\\\\\/g, '\\\\') // Fix excessive escape of bars
                    .replace(/\\n/g, '\n')
                    .replace(/\\r/g, '\r')
                    .replace(/\\t/g, '\t')
                    .replace(/\\"/g, '"')
                },
                {
-                 name: 'Limpeza completa de escapes',
+                 name: 'Complete escapes cleaning',
                  clean: (str: string) => str
                    .replace(/\\n/g, '\n')
                    .replace(/\\r/g, '\r')
@@ -403,21 +403,21 @@ export function useCsvParser() {
                    .replace(/\\'/g, "'")
                },
                {
-                 name: 'Remove caracteres não-printáveis e sanitiza',
+                 name: 'Remove non-printable characters and sanitize',
                  clean: (str: string) => {
-                   // Remove caracteres não-printáveis e faz sanitização agressiva
+                   // Remove non-printable characters and do aggressive sanitization
                    return str
-                     // Remove caracteres de controle exceto \n, \r, \t
+                     // Remove control characters except \n, \r, \t
                      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
-                     // Corrige escapes problemáticos
+                     // Fix problematic escapes
                      .replace(/\\(?!["\\/bfnrt])/g, '')
-                     // Normaliza quebras de linha
+                     // Normalize line breaks
                      .replace(/\\n/g, ' ')
                      .replace(/\\r/g, ' ')
                      .replace(/\\t/g, ' ')
-                     // Corrige aspas
+                     // Fix quotes
                      .replace(/\\"/g, '"')
-                     // Remove escapes excessivos
+                     // Remove excessive escapes
                      .replace(/\\\\/g, '\\');
                  }
                }
@@ -427,38 +427,38 @@ export function useCsvParser() {
               try {
                 const cleanedJson = strategy.clean(extractedJson);
                 const result = JSON.parse(cleanedJson);
-                console.log(`✅ Estratégia "${strategy.name}" funcionou para JSON de markdown`);
+                console.log(`✅ Strategy "${strategy.name}" worked for JSON from markdown`);
                 return result;
               } catch (e) {
-                console.log(`❌ Estratégia "${strategy.name}" falhou para JSON de markdown:`, (e as Error).message.substring(0, 100));
+                console.log(`❌ Strategy "${strategy.name}" failed for JSON from markdown:`, (e as Error).message.substring(0, 100));
               }
             }
             
-            console.warn(`⚠️ Todas as estratégias falharam para JSON de markdown: ${(directError as Error).message}`);
-            console.warn('🔄 Retornando undefined para continuar processamento');
+            console.warn(`⚠️ All strategies failed for JSON from markdown: ${(directError as Error).message}`);
+            console.warn('🔄 Returning undefined to continue processing');
             return undefined;
           }
         }
       }
       
-      // Se a string parece estar em um objeto com campo "content"
+      // If the string looks like an object with "content" field
       if (jsonString.includes('"content":')) {
         try {
           const containerParsed = JSON.parse(jsonString);
           if (containerParsed.content) {
-            console.log('JSON extraído de campo content');
+            console.log('JSON extracted from content field');
             return JSON.parse(containerParsed.content);
           }
         } catch (e) {
-          console.log('Tentativa de extrair content falhou');
+          console.log('Failed to extract content');
         }
       }
       
-      console.log('Falha no parse, retornando undefined');
+      console.log('Failed to parse, returning undefined');
       return undefined;
     } catch (e) {
-      console.warn('⚠️ Erro capturado no parseJsonSafely:', (e as Error).message);
-      console.warn('🔄 Retornando undefined para permitir continuidade do processamento');
+      console.warn('⚠️ Captured error in parseJsonSafely:', (e as Error).message);
+      console.warn('🔄 Returning undefined to allow continued processing');
       return undefined;
     }
   };
@@ -477,90 +477,90 @@ export function useCsvParser() {
 
     // Se já é um objeto válido, retornar diretamente
     if (typeof data === 'object' && data !== null) {
-      console.log(`✅ ${context} já é um objeto válido, retornando diretamente`);
+      console.log(`✅ ${context} already is a valid object, returning directly`);
       return data;
     }
 
     // Se não é string, converter para string primeiro
     if (typeof data !== 'string') {
-      console.log(`🔄 ${context} não é string (tipo: ${dataType}), convertendo...`);
+      console.log(`🔄 ${context} not a string (type: ${dataType}), converting...`);
       data = String(data);
     }
 
     const jsonString = data as string;
     
-    console.log(`📊 Análise da string (${context}):`, {
+    console.log(`📊 String analysis (${context}):`, {
       tamanho: jsonString.length,
       primeiros50: jsonString.substring(0, 50),
       ultimos50: jsonString.length > 50 ? jsonString.substring(jsonString.length - 50) : jsonString,
       temAspasEscape: jsonString.includes('\\"'),
-      temQuebraLinha: jsonString.includes('\n'),
+      hasLineBreak: jsonString.includes('\n'),
       primeiroChar: jsonString.charAt(0),
       ultimoChar: jsonString.charAt(jsonString.length - 1)
     });
 
-    // Detectar problemas comuns antes de tentar parsing
+    // Detect common problems before trying parsing
     const problemasDetectados = [];
     
     if (!jsonString.trim()) {
-      problemasDetectados.push('String vazia ou apenas espaços');
+      problemasDetectados.push('Empty or only spaces string');
     }
     
     if (jsonString.includes('\\n') && !jsonString.includes('\n')) {
-      problemasDetectados.push('Contém \\\\n escapado que pode precisar ser convertido');
+      problemasDetectados.push('Contains \\\\n escaped that may need to be converted');
     }
     
     if (jsonString.includes('\\"') && jsonString.split('\\"').length > 10) {
-      problemasDetectados.push('Muitas aspas escapadas - pode ser JSON duplamente escapado');
+      problemasDetectados.push('Too many escaped quotes - may be double-escaped JSON');
     }
     
     if (jsonString.startsWith('"') && jsonString.endsWith('"') && jsonString.includes('{"')) {
-      problemasDetectados.push('Parece ser JSON stringificado dentro de aspas');
+      problemasDetectados.push('Seems to be JSON stringified inside quotes');
     }
     
     if (problemasDetectados.length > 0) {
-      console.log(`⚠️ Problemas detectados em ${context}:`, problemasDetectados);
+      console.log(`⚠️ Problems detected in ${context}:`, problemasDetectados);
     }
 
     // Tentar diferentes estratégias de parsing
     const strategies = [
       {
-        name: 'Parse direto',
+        name: 'Direct parse',
         exec: () => JSON.parse(jsonString)
       },
       {
-        name: 'Trim e parse',
+        name: 'Trim and parse',
         exec: () => JSON.parse(jsonString.trim())
       },
       {
-        name: 'Remove aspas externas de JSON stringificado',
+        name: 'Remove external quotes from JSON stringified',
         exec: () => {
           let cleaned = jsonString.trim();
           if (cleaned.startsWith('"') && cleaned.endsWith('"') && cleaned.includes('{"')) {
-            cleaned = cleaned.slice(1, -1); // remove aspas externas
-            cleaned = cleaned.replace(/\\"/g, '"'); // desescapa aspas internas
+            cleaned = cleaned.slice(1, -1); // remove external quotes
+            cleaned = cleaned.replace(/\\"/g, '"'); // desescape internal quotes
           }
           return JSON.parse(cleaned);
         }
       },
       {
-        name: 'Remove escapes de quebra de linha',
+        name: 'Remove line break escapes',
         exec: () => JSON.parse(jsonString.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t'))
       },
       {
-        name: 'Remove escape duplo de aspas',
+        name: 'Remove double escape from quotes',
         exec: () => JSON.parse(jsonString.replace(/\\"/g, '"'))
       },
       {
-        name: 'Remove todos os escapes básicos',
+        name: 'Remove all basic escapes',
         exec: () => JSON.parse(jsonString.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t').replace(/\\"/g, '"'))
       },
       {
-        name: 'Remove escape de barra invertida',
+        name: 'Remove backslash escape',
         exec: () => JSON.parse(jsonString.replace(/\\\\/g, '\\'))
       },
       {
-        name: 'Limpeza completa de escapes',
+        name: 'Complete escapes cleaning',
         exec: () => JSON.parse(jsonString
           .replace(/\\n/g, '\n')
           .replace(/\\r/g, '\r')
@@ -570,7 +570,7 @@ export function useCsvParser() {
           .replace(/\\'/g, "'"))
       },
       {
-        name: 'Remove quebras de linha literais',
+        name: 'Remove literal line breaks',
         exec: () => JSON.parse(jsonString.replace(/\n/g, '').replace(/\r/g, ''))
       },
       {
@@ -586,7 +586,7 @@ export function useCsvParser() {
         }
       },
       {
-        name: 'Parse após unescape HTML',
+        name: 'Parse after unescape HTML',
         exec: () => {
           const unescaped = jsonString
             .replace(/&quot;/g, '"')
@@ -600,48 +600,48 @@ export function useCsvParser() {
         }
       },
       {
-        name: 'Remove caracteres de controle problemáticos',
+        name: 'Remove problematic control characters',
         exec: () => {
-          // Remove caracteres de controle ASCII problemáticos
+          // Remove problematic ASCII control characters
           const cleaned = jsonString.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
           return JSON.parse(cleaned);
         }
       },
       {
-        name: 'Limpa template literals problemáticos',
+        name: 'Clean problematic template literals',
         exec: () => {
           const cleaned = jsonString
-            // Substitui template literals aninhados por strings simples
+            // Replace nested template literals with simple strings
             .replace(/\$\{[^}]*\}/g, '"TEMPLATE_LITERAL"')
             .replace(/`/g, '"')
-            // Remove caracteres de controle
+            // Remove control characters
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
           return JSON.parse(cleaned);
         }
       },
       {
-        name: 'Normaliza escapes múltiplos',
+        name: 'Normalize multiple escapes',
         exec: () => {
           const cleaned = jsonString
-            // Remove caracteres de controle primeiro
+            // Remove control characters first
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-            // Primeiro normaliza escapes excessivos
-            .replace(/\\\\\\\\/g, '\\\\') // Reduz \\\\ para \\
-            .replace(/\\\\"/g, '\\"')     // Reduz \\" para \"
-            // Depois aplica escape normal
+            // First normalize excessive escapes
+            .replace(/\\\\\\\\/g, '\\\\') // Reduce \\\\ to \\
+            .replace(/\\\\"/g, '\\"')     // Reduce \\" to \"
+            // Then apply normal escape
             .replace(/\\"/g, '"');
           return JSON.parse(cleaned);
         }
       },
       {
-        name: 'Sanitiza escapes problemáticos',
+        name: 'Sanitize problematic escapes',
         exec: () => {
           const cleaned = jsonString
-            // Remove caracteres de controle primeiro
+            // Remove control characters first
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-            // Corrige sequências de escape problemáticas
-            .replace(/\\(?!["\\/bfnrt])/g, '\\\\') // Adiciona escape para barras não seguidas por chars válidos
-            .replace(/\\\\\\\\/g, '\\\\') // Corrige escape excessivo de barras
+            // Fix problematic escape sequences
+            .replace(/\\(?!["\\/bfnrt])/g, '\\\\') // Add escape for bars not followed by valid chars
+            .replace(/\\\\\\\\/g, '\\\\') // Fix excessive escape of bars
             .replace(/\\n/g, '\n')
             .replace(/\\r/g, '\r')
             .replace(/\\t/g, '\t')
@@ -650,67 +650,67 @@ export function useCsvParser() {
         }
       },
       {
-        name: 'Sanitização agressiva para código complexo',
+        name: 'Aggressive sanitization for complex code',
         exec: () => {
           const cleaned = jsonString
-            // Remove caracteres de controle
+            // Remove control characters
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
-            // Substitui template literals por placeholders
+            // Replace template literals with placeholders
             .replace(/\$\{[^}]*\}/g, 'PLACEHOLDER')
             .replace(/`([^`]*)`/g, '"$1"')
-            // Normaliza escapes
+            // Normalize escapes
             .replace(/\\\\\\\\/g, '\\\\')
             .replace(/\\\\"/g, '\\"')
             .replace(/\\"/g, '"')
-            .replace(/\\n/g, '\\n') // Mantém como escape literal
+            .replace(/\\n/g, '\\n') // Keep as literal escape
             .replace(/\\r/g, '\\r')
             .replace(/\\t/g, '\\t');
           return JSON.parse(cleaned);
         }
       },
       {
-        name: 'Sanitização agressiva - remove caracteres problemáticos',
+        name: 'Aggressive sanitization - remove problematic characters',
         exec: () => {
           const cleaned = jsonString
-            // Remove caracteres de controle exceto \n, \r, \t
+            // Remove control characters except \n, \r, \t
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
-            // Corrige escapes problemáticos
+            // Fix problematic escapes
             .replace(/\\(?!["\\/bfnrt])/g, '')
-            // Normaliza quebras de linha para espaços
+            // Normalize line breaks to spaces
             .replace(/\\n/g, ' ')
             .replace(/\\r/g, ' ')
             .replace(/\\t/g, ' ')
-            // Corrige aspas
+            // Fix quotes
             .replace(/\\"/g, '"')
-            // Remove escapes excessivos
+            // Remove excessive escapes
             .replace(/\\\\/g, '\\');
           return JSON.parse(cleaned);
         }
       },
       {
-        name: 'Parse com remoção total de caracteres problemáticos',
+        name: 'Parse with total removal of problematic characters',
         exec: () => {
           const cleaned = jsonString
-            // Estratégia mais agressiva - remove tudo que pode causar problema
-            .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove todos os caracteres de controle
+            // Most aggressive strategy - remove everything that could cause problems
+            .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Remove all control characters
             .replace(/\\u[0-9a-fA-F]{4}/g, '') // Remove unicode escapes
-            .replace(/\$\{[^}]*\}/g, 'TEMPLATE') // Substitui template literals
-            .replace(/`[^`]*`/g, '"STRING"') // Substitui template strings
-            .replace(/\\\\/g, '\\') // Normaliza barras
-            .replace(/\\"/g, '"') // Normaliza aspas
-            .replace(/\s+/g, ' ') // Normaliza espaços
+            .replace(/\$\{[^}]*\}/g, 'TEMPLATE') // Replace template literals
+            .replace(/`[^`]*`/g, '"STRING"') // Replace template strings
+            .replace(/\\\\/g, '\\') // Normalize backslashes
+            .replace(/\\"/g, '"') // Normalize quotes
+            .replace(/\s+/g, ' ') // Normalize spaces
             .trim();
           return JSON.parse(cleaned);
         }
       },
       {
-        name: 'Fallback: tentar como string simples',
+        name: 'Fallback: try as simple string',
         exec: () => {
-          // Se nada funcionou, talvez seja apenas uma string simples que precisa ser tratada como tal
+          // If nothing worked, maybe it's just a simple string that needs to be treated as such
           if (jsonString.startsWith('"') && jsonString.endsWith('"')) {
-            return jsonString.slice(1, -1); // remove aspas externas
+            return jsonString.slice(1, -1); // remove external quotes
           }
-          return jsonString; // retorna como string
+          return jsonString; // return as string
         }
       }
     ];
@@ -718,31 +718,31 @@ export function useCsvParser() {
     for (const strategy of strategies) {
       try {
         const result = strategy.exec();
-        console.log(`✅ Estratégia "${strategy.name}" funcionou para ${context}`);
+        console.log(`✅ Strategy "${strategy.name}" worked for ${context}`);
         
-        // Log adicional sobre o resultado
+        // Additional log about the result
         if (typeof result === 'object' && result !== null) {
-          console.log(`📊 Resultado da estratégia "${strategy.name}": objeto com chaves:`, Object.keys(result));
+          console.log(`📊 Result of strategy "${strategy.name}": object with keys:`, Object.keys(result));
         } else {
-          console.log(`📊 Resultado da estratégia "${strategy.name}": tipo ${typeof result}, valor:`, 
+          console.log(`📊 Result of strategy "${strategy.name}": type ${typeof result}, value:`, 
             typeof result === 'string' ? result.substring(0, 100) + '...' : result);
         }
         
         return result;
       } catch (e) {
         const errorMsg = (e as Error).message;
-        console.log(`❌ Estratégia "${strategy.name}" falhou:`, errorMsg.substring(0, 100));
+        console.log(`❌ Strategy "${strategy.name}" failed:`, errorMsg.substring(0, 100));
       }
     }
 
-    // Se chegou aqui, todas as estratégias falharam
-    console.error(`💥 TODAS AS ESTRATÉGIAS FALHARAM para ${context}`);
-    console.error(`🔍 Dados que causaram falha:`, {
+    // If we reach here, all strategies failed
+    console.error(`💥 ALL STRATEGIES FAILED for ${context}`);
+    console.error(`🔍 Data that caused failure:`, {
       tipo: typeof jsonString,
       tamanho: jsonString.length,
       amostra: jsonString.substring(0, 300),
       caracteresEspeciais: {
-        temQuebraLinha: jsonString.includes('\n'),
+        hasLineBreak: jsonString.includes('\n'),
         temCarriageReturn: jsonString.includes('\r'),
         temTab: jsonString.includes('\t'),
         temAspasEscape: jsonString.includes('\\"'),
@@ -752,14 +752,14 @@ export function useCsvParser() {
       }
     });
 
-    // Em vez de fazer throw, retornar estrutura de fallback mais tolerante
-    console.warn(`⚠️ Todas as estratégias falharam para ${context}, retornando estrutura de fallback`);
+    // Instead of throwing, return a more tolerant fallback structure
+    console.warn(`⚠️ ALL STRATEGIES FAILED for ${context}, returning fallback structure`);
     
     return {
       fallback: true,
       context: context,
       originalData: jsonString.substring(0, 500) + (jsonString.length > 500 ? '...' : ''),
-      errorMessage: `Todas as estratégias de parsing falharam para ${context}`
+      errorMessage: `All parsing strategies failed for ${context}`
     };
   };
 
@@ -783,26 +783,26 @@ export function useCsvParser() {
         if (char === '"') {
           quoteCount++;
           
-          // Se estamos no início de um campo e encontramos aspas
+          // If we're at the start of a field and we find quotes
           if (current === '' && !inQuotes) {
             inQuotes = true;
             continue;
           }
           
-          // Se encontramos aspas duplas consecutivas dentro de aspas
+          // If we find consecutive double quotes inside quotes
           if (nextChar === '"' && inQuotes) {
             current += '"';
-            j++; // pula a próxima aspa
+            j++; // skip the next quote
             continue;
           }
           
-          // Se estamos dentro de aspas e encontramos uma aspa única
+          // If we're inside quotes and we find a single quote
           if (inQuotes) {
             inQuotes = false;
             continue;
           }
           
-          // Caso contrário, adiciona a aspa ao conteúdo
+          // Otherwise, add the quote to the content
           current += char;
         } else if (char === ',' && !inQuotes) {
           row.push(current);
@@ -812,7 +812,7 @@ export function useCsvParser() {
         }
       }
       
-      // Adiciona o último campo
+      // Add the last field
       row.push(current);
       result.push(row);
     }
@@ -825,38 +825,38 @@ export function useCsvParser() {
     setError(null);
 
     try {
-      console.log('🚀 Iniciando parse do CSV...');
-      console.log('📊 Tamanho total do CSV:', csvContent.length, 'caracteres');
+      console.log('🚀 Starting CSV parse...');
+      console.log('📊 Total CSV size:', csvContent.length, 'characters');
       
-      // Mostrar uma amostra dos dados brutos para debug
+      // Show a sample of raw data for debug
       const sampleLines = csvContent.split('\n').slice(0, 3);
-      console.log('📋 Amostra das primeiras linhas do CSV:');
+      console.log('📋 Sample of the first lines of CSV:');
       sampleLines.forEach((line, index) => {
-        console.log(`  Linha ${index}: ${line.substring(0, 200)}${line.length > 200 ? '...' : ''}`);
+        console.log(`  Line ${index}: ${line.substring(0, 200)}${line.length > 200 ? '...' : ''}`);
       });
       
       const rows = parseCsvAdvanced(csvContent);
-      console.log('📋 Linhas extraídas do CSV:', rows.length);
+      console.log('📋 Extracted lines from CSV:', rows.length);
       
-      // Debug das primeiras linhas parseadas
+      // Debug of the first parsed lines
       if (rows.length > 1) {
-        console.log('🔍 Debug da primeira linha de dados (linha 2):');
+        console.log('🔍 Debug of the first data line (line 2):');
         rows[1].forEach((cell, index) => {
-          console.log(`  Campo ${index} (${rows[0][index]}): tipo=${typeof cell}, tamanho=${cell.length}, amostra="${cell.substring(0, 100)}${cell.length > 100 ? '...' : ''}"`);
+          console.log(`  Field ${index} (${rows[0][index]}): type=${typeof cell}, size=${cell.length}, sample="${cell.substring(0, 100)}${cell.length > 100 ? '...' : ''}"`);
         });
       }
       
       if (rows.length < 2) {
-        throw new Error('CSV deve ter pelo menos uma linha de cabeçalho e uma linha de dados');
+        throw new Error('CSV must have at least one header line and one data line');
       }
 
       const headers = rows[0].map(h => h.trim());
-      console.log('📝 Headers encontrados:', headers);
+      console.log('📝 Headers found:', headers);
 
       const requiredHeaders = ['id', 'inputs', 'outputs'];
       const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
       if (missingHeaders.length > 0) {
-        throw new Error(`Headers obrigatórios ausentes: ${missingHeaders.join(', ')}`);
+        throw new Error(`Missing required headers: ${missingHeaders.join(', ')}`);
       }
 
       const comparisonRows: ComparisonRow[] = [];
@@ -867,7 +867,7 @@ export function useCsvParser() {
         const values = rows[i];
         
         if (values.length === 0 || (values.length === 1 && !values[0].trim())) {
-          continue; // pula linhas vazias
+          continue; // skip empty lines
         }
 
         try {
@@ -876,21 +876,21 @@ export function useCsvParser() {
             row[header] = values[index] || '';
           });
 
-          console.log(`\n🔄 Processando linha ${i}, ID: ${row.id}`);
-          console.log(`📏 Campos extraídos:`, Object.keys(row).map(key => {
+          console.log(`\n🔄 Processing line ${i}, ID: ${row.id}`);
+          console.log(`📏 Extracted fields:`, Object.keys(row).map(key => {
             const value = row[key];
             const type = typeof value;
             const length = type === 'string' ? value.length : 'N/A';
             return `${key}: ${type} (${length} chars)`;
           }));
 
-          // Parse dos campos JSON principais com debug melhorado
+          // Parse main JSON fields with improved debug
           let inputs, outputs;
           
-          // Parse inputs com debug detalhado
+          // Parse inputs with detailed debug
           try {
-            console.log(`🔍 Tentando parse de inputs na linha ${i}`);
-            console.log(`🔍 Dados brutos de inputs:`, {
+            console.log(`🔍 Trying to parse inputs in line ${i}`);
+            console.log(`🔍 Raw inputs data:`, {
               tipo: typeof row.inputs,
               tamanho: row.inputs?.length || 'N/A',
               amostra: row.inputs?.substring ? row.inputs.substring(0, 200) + '...' : row.inputs,
@@ -901,35 +901,35 @@ export function useCsvParser() {
               temContent: row.inputs?.includes ? row.inputs.includes('"content"') : false
             });
             
-            // Primeiro verificar se inputs precisa de parse duplo (como outputs)
+            // First check if inputs need double parse (like outputs)
             let inputsData = row.inputs;
             
-            // Se parece ter estrutura {"output": "..."} ou similar, tentar parse inicial
+            // If it looks like a container structure {"output": "..."} or similar, try initial parse
             if (typeof inputsData === 'string' && inputsData.trim().startsWith('{') && inputsData.includes('"output"')) {
               try {
-                console.log('🔧 Inputs parece ter estrutura de container, tentando parse inicial...');
+                console.log('🔧 Inputs looks like container structure, trying initial parse...');
                 const containerParsed = JSON.parse(inputsData);
                 if (containerParsed.output) {
-                  console.log('🎯 Encontrado campo output em inputs, usando ele');
+                  console.log('🎯 Found output field in inputs, using it');
                   inputsData = containerParsed.output;
                 } else if (containerParsed.inputs) {
-                  console.log('🎯 Encontrado campo inputs em inputs, usando ele');
+                  console.log('🎯 Found inputs field in inputs, using it');
                   inputsData = containerParsed.inputs;
                 } else {
-                  console.log('🎯 Container parseado mas sem campo output/inputs esperado, usando dados originais');
+                  console.log('🎯 Container parsed but no expected output/inputs field, using original data');
                 }
               } catch (containerError) {
-                console.log('⚠️ Falha ao parsear container de inputs, usando dados originais');
+                console.log('⚠️ Failed to parse container of inputs, using original data');
               }
             }
             
-            inputs = debugJsonParsing(inputsData, `inputs linha ${i}`);
-            console.log('✅ Inputs parseados com sucesso:', typeof inputs === 'object' ? Object.keys(inputs || {}) : typeof inputs);
+            inputs = debugJsonParsing(inputsData, `inputs line ${i}`);
+            console.log('✅ Inputs parsed successfully:', typeof inputs === 'object' ? Object.keys(inputs || {}) : typeof inputs);
           } catch (e) {
-            const errorMsg = `Erro no JSON de inputs: ${(e as Error).message}`;
-            console.warn(`⚠️ Linha ${i + 1} - Erro no parse de inputs, criando fallback: ${errorMsg}`);
+            const errorMsg = `Error in JSON of inputs: ${(e as Error).message}`;
+            console.warn(`⚠️ Line ${i + 1} - Error in inputs parse, creating fallback: ${errorMsg}`);
             
-            // Em vez de pular a linha, criar uma estrutura de fallback para inputs
+            // Instead of skipping the line, create a fallback structure for inputs
             inputs = {
               fallback: true,
               errorMessage: errorMsg,
@@ -937,16 +937,16 @@ export function useCsvParser() {
             };
           }
 
-          // Parse outputs com debug detalhado
+          // Parse outputs with detailed debug
           try {
-            console.log(`🔍 Tentando parse de outputs na linha ${i}`);
-            outputs = debugJsonParsing(row.outputs, `outputs linha ${i}`);
-            console.log('✅ Outputs parseados com sucesso:', typeof outputs, Object.keys(outputs || {}));
+            console.log(`🔍 Trying to parse outputs in line ${i}`);
+            outputs = debugJsonParsing(row.outputs, `outputs line ${i}`);
+            console.log('✅ Outputs parsed successfully:', typeof outputs, Object.keys(outputs || {}));
           } catch (e) {
-            const errorMsg = `Erro no JSON de outputs: ${(e as Error).message}`;
-            console.warn(`⚠️ Linha ${i + 1} - Erro no parse de outputs, criando fallback: ${errorMsg}`);
+            const errorMsg = `Error in JSON of outputs: ${(e as Error).message}`;
+            console.warn(`⚠️ Line ${i + 1} - Error in outputs parse, creating fallback: ${errorMsg}`);
             
-            // Em vez de pular a linha, criar uma estrutura de fallback para outputs
+            // Instead of skipping the line, create a fallback structure for outputs
             outputs = {
               fallback: true,
               errorMessage: errorMsg,
@@ -954,11 +954,11 @@ export function useCsvParser() {
             };
           }
           
-          // Preparar o output principal com tratamento melhorado
+          // Prepare the main output with better handling
           let outputForComparison;
           
           try {
-            console.log(`🔧 Analisando estrutura de outputs na linha ${i}:`, {
+            console.log(`🔧 Analyzing outputs structure in line ${i}:`, {
               tipo: typeof outputs,
               ehString: typeof outputs === 'string',
               ehObjeto: typeof outputs === 'object',
@@ -968,9 +968,9 @@ export function useCsvParser() {
               keys: outputs && typeof outputs === 'object' ? Object.keys(outputs) : 'N/A'
             });
 
-            // Se outputs é uma string, é provavelmente o JSON direto
+            // If outputs is a string, it's probably direct JSON
             if (typeof outputs === 'string') {
-              console.log('📝 Outputs é string, tentando parse...');
+              console.log('📝 Outputs is string, trying parse...');
               const parsedSuggestion = parseJsonSafely(outputs);
               outputForComparison = {
                 output: outputs,
@@ -978,15 +978,15 @@ export function useCsvParser() {
                 label: 'Modelo B'
               };
             } 
-            // Se outputs tem campo 'output' (estrutura mais complexa)
+            // If outputs has 'output' field (more complex structure)
             else if (outputs && typeof outputs === 'object' && outputs.output) {
-              console.log('🔧 Outputs tem campo output, tentando parse...');
-              console.log('🔍 Tipo do campo output:', typeof outputs.output);
-              console.log('🔍 Amostra do campo output:', typeof outputs.output === 'string' ? outputs.output.substring(0, 150) + '...' : outputs.output);
+              console.log('🔧 Outputs has output field, trying parse...');
+              console.log('🔍 Type of output field:', typeof outputs.output);
+              console.log('🔍 Output sample:', typeof outputs.output === 'string' ? outputs.output.substring(0, 150) + '...' : outputs.output);
               
-              // AQUI É O PONTO CRÍTICO: se output é uma string JSON escapada, precisamos parseá-la
+              // HERE IS THE CRITICAL POINT: if output is a string JSON escaped, we need to parse it
               const parsedSuggestion = parseJsonSafely(outputs.output);
-              console.log('🎯 Resultado do parse do campo output:', parsedSuggestion ? (parsedSuggestion.codeSuggestions ? `✅ ${parsedSuggestion.codeSuggestions.length} codeSuggestions encontradas` : '⚠️ Sem codeSuggestions') : '❌ Parse falhou');
+              console.log('🎯 Result of output parse:', parsedSuggestion ? (parsedSuggestion.codeSuggestions ? `✅ ${parsedSuggestion.codeSuggestions.length} codeSuggestions found` : '⚠️ No codeSuggestions') : '❌ Parse failed');
               
               outputForComparison = {
                 output: outputs.output,
@@ -994,19 +994,19 @@ export function useCsvParser() {
                 label: outputs.label || 'Modelo B'
               };
             } 
-            // Se outputs já é o objeto parseado (raro mas possível)
+            // If outputs is already the parsed object (rare but possible)
             else if (outputs && typeof outputs === 'object' && outputs.codeSuggestions) {
-              console.log('📚 Outputs já parece ser estrutura de sugestão parseada');
+              console.log('📚 Outputs already looks like parsed suggestion structure');
               outputForComparison = {
                 output: JSON.stringify(outputs, null, 2),
                 parsed: outputs,
                 label: 'Modelo B'
               };
             }
-            // Caso padrão
+            // Default case
             else {
-              console.log('🎯 Estrutura de outputs não reconhecida, usando como JSON');
-              console.log('🎯 Dados de outputs:', outputs);
+              console.log('🎯 Outputs structure not recognized, using as JSON');
+              console.log('🎯 Outputs data:', outputs);
               outputForComparison = {
                 output: typeof outputs === 'string' ? outputs : JSON.stringify(outputs, null, 2),
                 parsed: undefined,
@@ -1014,17 +1014,17 @@ export function useCsvParser() {
               };
             }
           } catch (e) {
-            const errorMsg = `Erro na estrutura de outputs: ${(e as Error).message}`;
-            console.warn(`⚠️ Linha ${i + 1} - Erro no parse de outputs, criando fallback: ${errorMsg}`);
+            const errorMsg = `Error in outputs structure: ${(e as Error).message}`;
+            console.warn(`⚠️ Line ${i + 1} - Error in outputs parse, creating fallback: ${errorMsg}`);
             
-            // Em vez de pular a linha, criar uma estrutura de fallback
+            // Instead of skipping the line, create a fallback
             outputForComparison = {
               output: JSON.stringify(outputs, null, 2),
               parsed: {
-                overallSummary: `Erro ao processar linha ${i + 1}: ${errorMsg}`,
+                overallSummary: `Error processing line ${i + 1}: ${errorMsg}`,
                 codeSuggestions: []
               },
-              label: 'Modelo B (com erro)'
+              label: 'Modelo B (with error)'
             };
           }
           
@@ -1034,12 +1034,12 @@ export function useCsvParser() {
             outputs: outputForComparison
           };
 
-          // Parse reference_outputs se existir - com debug melhorado
+          // Parse reference_outputs if exists - with improved debug
           if (row.reference_outputs && row.reference_outputs.trim()) {
             try {
-              console.log(`🔍 Tentando parse de reference_outputs na linha ${i}`);
-              const refOutputs = debugJsonParsing(row.reference_outputs, `reference_outputs linha ${i}`);
-              console.log('✅ Reference outputs parseados:', typeof refOutputs);
+              console.log(`🔍 Trying to parse reference_outputs in line ${i}`);
+              const refOutputs = debugJsonParsing(row.reference_outputs, `reference_outputs line ${i}`);
+              console.log('✅ Reference outputs parsed:', typeof refOutputs);
               
               let refOutputForComparison;
               
@@ -1049,91 +1049,91 @@ export function useCsvParser() {
                   refOutputForComparison = {
                     output: refOutputs,
                     parsed: parsedRefSuggestion,
-                    label: 'Referência'
+                    label: 'Reference'
                   };
                 } else if (refOutputs && refOutputs.output) {
-                  console.log('🔧 Reference outputs tem campo output, tentando parse...');
-                  console.log('🔍 Tipo do campo output (ref):', typeof refOutputs.output);
-                  console.log('🔍 Amostra do campo output (ref):', typeof refOutputs.output === 'string' ? refOutputs.output.substring(0, 150) + '...' : refOutputs.output);
+                  console.log('🔧 Reference outputs has output field, trying parse...');
+                  console.log('🔍 Type of output field (ref):', typeof refOutputs.output);
+                  console.log('🔍 Output sample of output field (ref):', typeof refOutputs.output === 'string' ? refOutputs.output.substring(0, 150) + '...' : refOutputs.output);
                   
                   const parsedRefSuggestion = parseJsonSafely(refOutputs.output);
-                  console.log('🎯 Resultado do parse do campo output (ref):', parsedRefSuggestion ? (parsedRefSuggestion.codeSuggestions ? `✅ ${parsedRefSuggestion.codeSuggestions.length} codeSuggestions encontradas` : '⚠️ Sem codeSuggestions') : '❌ Parse falhou');
+                  console.log('🎯 Result of output parse of reference_outputs:', parsedRefSuggestion ? (parsedRefSuggestion.codeSuggestions ? `✅ ${parsedRefSuggestion.codeSuggestions.length} codeSuggestions found` : '⚠️ No codeSuggestions') : '❌ Parse failed');
                   
                   refOutputForComparison = {
                     output: refOutputs.output,
                     parsed: parsedRefSuggestion,
-                    label: refOutputs.label || 'Referência'
+                    label: refOutputs.label || 'Reference'
                   };
                 } else if (refOutputs && refOutputs.codeSuggestions) {
                   refOutputForComparison = {
                     output: JSON.stringify(refOutputs, null, 2),
                     parsed: refOutputs,
-                    label: 'Referência'
+                    label: 'Reference'
                   };
                 } else {
                   refOutputForComparison = {
                     output: JSON.stringify(refOutputs, null, 2),
                     parsed: undefined,
-                    label: 'Referência'
+                    label: 'Reference'
                   };
                 }
                 
                 comparisonRow.reference_outputs = refOutputForComparison;
               } catch (e) {
-                console.warn(`⚠️ Erro ao processar estrutura de reference_outputs na linha ${i + 1} - criando fallback:`, e);
+                console.warn(`⚠️ Error processing reference_outputs structure in line ${i + 1} - creating fallback:`, e);
                 
-                // Em vez de ignorar, criar uma estrutura de fallback
+                // Instead of ignoring, create a fallback
                 comparisonRow.reference_outputs = {
                   output: JSON.stringify(refOutputs, null, 2),
                   parsed: {
-                    overallSummary: `Erro ao processar reference_outputs da linha ${i + 1}`,
+                    overallSummary: `Error processing reference_outputs of line ${i + 1}`,
                     codeSuggestions: []
                   },
-                  label: 'Referência (com erro)'
+                  label: 'Reference (with error)'
                 };
               }
             } catch (e) {
-              console.warn(`⚠️ Erro ao fazer parse de reference_outputs na linha ${i + 1} - criando fallback:`, e);
+              console.warn(`⚠️ Error making reference_outputs parse in line ${i + 1} - creating fallback:`, e);
               
-              // Em vez de ignorar, criar uma estrutura de fallback
+              // Instead of ignoring, create a fallback
               comparisonRow.reference_outputs = {
-                output: row.reference_outputs || 'Dados indisponíveis',
+                output: row.reference_outputs || 'Data unavailable',
                 parsed: {
-                  overallSummary: `Erro ao processar reference_outputs da linha ${i + 1}: ${(e as Error).message}`,
+                  overallSummary: `Error processing reference_outputs of line ${i + 1}: ${(e as Error).message}`,
                   codeSuggestions: []
                 },
-                label: 'Referência (com erro de parse)'
+                label: 'Reference (with parse error)'
               };
             }
           }
 
-          // Suporte para outputs alternativos (para testes A/B/C)
+          // Support for alternative outputs (for A/B/C tests)
           const alternativeKeys = headers.filter(h => h.startsWith('alternative_output_'));
           if (alternativeKeys.length > 0) {
             comparisonRow.alternativeOutputs = [];
             alternativeKeys.forEach(key => {
               if (row[key] && row[key].trim()) {
                 try {
-                  const altOutput = debugJsonParsing(row[key], `${key} linha ${i}`);
+                  const altOutput = debugJsonParsing(row[key], `${key} line ${i}`);
                   const label = key.replace('alternative_output_', '').replace('_', ' ');
                   comparisonRow.alternativeOutputs!.push({
                     output: typeof altOutput === 'string' ? altOutput : JSON.stringify(altOutput, null, 2),
                     parsed: typeof altOutput === 'string' ? parseJsonSafely(altOutput) : 
                            (altOutput.output ? parseJsonSafely(altOutput.output) : altOutput),
-                    label: altOutput.label || label || 'Alternativo'
+                    label: altOutput.label || label || 'Alternative'
                   });
                 } catch (e) {
-                  console.warn(`⚠️ Erro ao fazer parse de ${key} na linha ${i + 1} - criando fallback:`, e);
+                  console.warn(`⚠️ Error making parse of ${key} in line ${i + 1} - creating fallback:`, e);
                   
-                  // Em vez de ignorar, criar uma estrutura de fallback
+                  // Instead of ignoring, create a fallback
                   const label = key.replace('alternative_output_', '').replace('_', ' ');
                   comparisonRow.alternativeOutputs!.push({
-                    output: row[key] || 'Dados indisponíveis',
+                    output: row[key] || 'Data unavailable',
                     parsed: {
-                      overallSummary: `Erro ao processar ${key} da linha ${i + 1}: ${(e as Error).message}`,
+                      overallSummary: `Error processing ${key} of line ${i + 1}: ${(e as Error).message}`,
                       codeSuggestions: []
                     },
-                    label: `${label} (com erro)`
+                    label: `${label} (with error)`
                   });
                 }
               }
@@ -1141,58 +1141,58 @@ export function useCsvParser() {
           }
 
           comparisonRows.push(comparisonRow);
-          console.log(`✅ Linha ${i} processada com sucesso`);
+          console.log(`✅ Line ${i} processed successfully`);
         } catch (error) {
-          const errorMsg = `Erro geral: ${(error as Error).message}`;
-          console.warn(`❌ Erro ao processar linha ${i + 1}:`, error);
-          console.warn(`⚠️ Linha ${i + 1} será pulada - continuando com próxima linha...`);
+          const errorMsg = `General error: ${(error as Error).message}`;
+          console.warn(`❌ Error processing line ${i + 1}:`, error);
+          console.warn(`⚠️ Line ${i + 1} will be skipped - continuing with next line...`);
           errorDetails[i + 1] = errorMsg;
           skippedRows.push(i + 1);
-          // Continua processando outras linhas
+          // Continue processing other lines
         }
       }
 
-      // Relatório final com detalhes dos erros
+      // Final report with error details
       if (skippedRows.length > 0) {
-        console.group(`⚠️  RELATÓRIO DE ERROS - ${skippedRows.length} linhas puladas (processamento continuou):`);
+        console.group(`⚠️  ERROR REPORT - ${skippedRows.length} skipped lines (processing continued):`);
         skippedRows.forEach(lineNum => {
-          console.log(`📍 Linha ${lineNum}: ${errorDetails[lineNum] || 'Erro não especificado'}`);
+          console.log(`📍 Line ${lineNum}: ${errorDetails[lineNum] || 'Unspecified error'}`);
         });
         console.groupEnd();
         
-        console.info(`✅ Processamento finalizado: ${comparisonRows.length} linhas processadas com sucesso, ${skippedRows.length} linhas puladas`);
+        console.info(`✅ Final processing completed: ${comparisonRows.length} lines processed, ${skippedRows.length} lines skipped`);
       }
 
       if (comparisonRows.length === 0) {
-        // Criar uma mensagem de erro mais detalhada
+        // Create a more detailed error message
         const errorSummary = Object.entries(errorDetails)
-          .slice(0, 5) // mostrar apenas os primeiros 5 erros
-          .map(([line, error]) => `Linha ${line}: ${error}`)
+          .slice(0, 5) // show only the first 5 errors
+          .map(([line, error]) => `Line ${line}: ${error}`)
           .join('\n');
         
-        throw new Error(`❌ Nenhuma linha válida foi processada. Todas as ${rows.length - 1} linhas de dados tinham erros no JSON.\n\nPrimeiros erros encontrados:\n${errorSummary}\n\n💡 Sugestões:\n- Verifique se o JSON nas células está escapado corretamente\n- Teste uma linha individual no console\n- Considere usar uma ferramenta para validar o CSV`);
+        throw new Error(`❌ No valid lines were processed. All ${rows.length - 1} data lines had errors in JSON.\n\nFirst errors found:\n${errorSummary}\n\n💡 Suggestions:\n- Check if JSON in cells is escaped correctly\n- Test an individual line in console\n- Consider using a tool to validate the CSV`);
       }
 
       const totalProcessed = comparisonRows.length;
       const totalSkipped = skippedRows.length;
-      const totalLines = rows.length - 1; // excluindo header
+      const totalLines = rows.length - 1; // excluding header
       
-      let message = `✅ ${totalProcessed} de ${totalLines} linhas processadas`;
+      let message = `✅ ${totalProcessed} of ${totalLines} lines processed`;
       
       if (totalSkipped > 0) {
-        message += ` (${totalSkipped} linhas puladas: ${skippedRows.join(', ')})`;
+        message += ` (${totalSkipped} skipped lines: ${skippedRows.join(', ')})`;
       }
       
       if (totalProcessed > 0) {
-        message += `\n🎯 Sistema agora é mais tolerante: linhas com erros parciais são mantidas com estruturas de fallback`;
+        message += `\n🎯 System now is more tolerant: lines with partial errors are kept with fallback structures`;
       }
       
       console.log(message);
       setIsLoading(false);
       return comparisonRows;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      console.error('💥 Erro no parser CSV:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('💥 Error in CSV parser:', error);
       setError(errorMessage);
       setIsLoading(false);
       throw error;

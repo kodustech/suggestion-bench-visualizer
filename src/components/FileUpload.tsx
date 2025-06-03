@@ -65,7 +65,7 @@ export default function FileUpload({
           {loading ? (
             <div className="flex flex-col items-center space-y-3">
               <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-blue-600 font-medium">Processando arquivo...</p>
+              <p className="text-blue-600 font-medium">Processing file...</p>
             </div>
           ) : (
             <>
@@ -83,7 +83,7 @@ export default function FileUpload({
                 
                 <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 cursor-pointer transition-colors">
                   <File className="w-4 h-4 mr-2" />
-                  Escolher arquivo
+                  Choose file
                   <input
                     type="file"
                     accept={accept}
@@ -93,7 +93,7 @@ export default function FileUpload({
                 </label>
                 
                 <p className="text-xs text-gray-500 mt-3">
-                  Ou arraste e solte o arquivo aqui
+                  Or drag and drop the file here
                 </p>
               </div>
             </>

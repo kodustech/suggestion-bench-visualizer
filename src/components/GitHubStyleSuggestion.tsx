@@ -69,7 +69,7 @@ export default function GitHubStyleSuggestion({
     
     const lowerLabel = label.toLowerCase();
     
-    // Mapear labels comuns para severidade
+    // Map common labels to severity
     if (lowerLabel.includes('critical') || lowerLabel.includes('security') || lowerLabel.includes('vulnerability') || lowerLabel.includes('exploit')) {
       return 'critical';
     }
@@ -83,7 +83,7 @@ export default function GitHubStyleSuggestion({
       return 'info';
     }
     
-    // Labels específicos comuns no contexto de code review
+    // Common specific labels in code review context
     const severityMap: { [key: string]: string } = {
       'refactoring': 'info',
       'optimization': 'warning',
@@ -111,7 +111,7 @@ export default function GitHubStyleSuggestion({
   };
 
   const extractCodeFromSuggestion = (suggestionContent: string) => {
-    // Tentar extrair código de diferentes formatos
+    // Try to extract code from different formats
     const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
     const matches = Array.from(suggestionContent.matchAll(codeBlockRegex));
     
@@ -122,8 +122,8 @@ export default function GitHubStyleSuggestion({
       }));
     }
 
-    // Se não há blocos de código, verificar se há menção a linhas específicas
-    const lineRegex = /linha\s*(\d+)(?:-(\d+))?/gi;
+    // If there are no code blocks, check if there are specific line references
+    const lineRegex = /line\s*(\d+)(?:-(\d+))?/gi;
     const lineMatch = suggestionContent.match(lineRegex);
     
     return [{
@@ -138,7 +138,7 @@ export default function GitHubStyleSuggestion({
     const newLines = newCode.split('\n');
     const diffLines: string[] = [];
     
-    // Algoritmo melhorado de diff usando Longest Common Subsequence (LCS)
+    // Improved diff algorithm using Longest Common Subsequence (LCS)
     const lcs = computeLCS(oldLines, newLines);
     
     let oldIndex = 0;
@@ -151,18 +151,18 @@ export default function GitHubStyleSuggestion({
           newIndex < newLines.length &&
           oldLines[oldIndex] === lcs[lcsIndex] && 
           newLines[newIndex] === lcs[lcsIndex]) {
-        // Linha comum (inalterada)
+        // Common line (unchanged)
         diffLines.push(` ${oldLines[oldIndex]}`);
         oldIndex++;
         newIndex++;
         lcsIndex++;
       } else if (oldIndex < oldLines.length && 
                  (lcsIndex >= lcs.length || oldLines[oldIndex] !== lcs[lcsIndex])) {
-        // Linha removida
+        // Removed line
         diffLines.push(`-${oldLines[oldIndex]}`);
         oldIndex++;
       } else if (newIndex < newLines.length) {
-        // Linha adicionada
+        // Added line
         diffLines.push(`+${newLines[newIndex]}`);
         newIndex++;
       }
@@ -208,29 +208,29 @@ export default function GitHubStyleSuggestion({
 
   const renderSuggestionOverview = () => (
     <div className="space-y-4">
-      {/* Resumo geral */}
+      {/* General summary */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
           <Info className="w-5 h-5 text-blue-500 mt-0.5" />
           <div>
-            <h4 className="font-medium text-blue-900 mb-1">Resumo Geral</h4>
+            <h4 className="font-medium text-blue-900 mb-1">General Summary</h4>
             <p className="text-blue-800 text-sm leading-relaxed">{suggestion.overallSummary}</p>
           </div>
         </div>
       </div>
 
-      {/* Lista de sugestões */}
+      {/* List of suggestions */}
       <div className="space-y-3">
         {suggestion.codeSuggestions.map((codeSuggestion, index) => (
           <div key={index} className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-            {/* Header da sugestão */}
+            {/* Suggestion header */}
             <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2">
                     <FileText className="w-4 h-4 text-gray-600" />
                     <span className="font-mono text-sm text-gray-900">
-                      {codeSuggestion.relevantFile || 'arquivo-desconhecido'}
+                      {codeSuggestion.relevantFile || 'unknown-file'}
                     </span>
                   </div>
                   
@@ -238,7 +238,7 @@ export default function GitHubStyleSuggestion({
                     <>
                       <span className="text-gray-400">•</span>
                       <span className="text-sm text-gray-600">
-                        Linhas {codeSuggestion.relevantLinesStart || '?'}-{codeSuggestion.relevantLinesEnd || '?'}
+                        Lines {codeSuggestion.relevantLinesStart || '?'}-{codeSuggestion.relevantLinesEnd || '?'}
                       </span>
                     </>
                   )}
@@ -247,7 +247,7 @@ export default function GitHubStyleSuggestion({
                 <div className="flex items-center space-x-2">
                   {codeSuggestion.label && (() => {
                     const severity = codeSuggestion.severity || inferSeverityFromLabel(codeSuggestion.label);
-                    console.log(`🏷️ Renderizando label "${codeSuggestion.label}" com severidade "${severity}"`);
+                    console.log(`🏷️ Renderizing label "${codeSuggestion.label}" with severity "${severity}"`);
                     return (
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSeverityBadgeClasses(severity)}`}>
                         {getSeverityIcon(severity)}
@@ -258,16 +258,16 @@ export default function GitHubStyleSuggestion({
                   
                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
-                    Sugestão
+                    Suggestion
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Conteúdo da sugestão */}
+            {/* Suggestion content */}
             <div className="p-4">
               <h5 className="font-medium text-gray-900 mb-3">
-                {codeSuggestion.oneSentenceSummary || `Sugestão ${index + 1}`}
+                {codeSuggestion.oneSentenceSummary || `Suggestion ${index + 1}`}
               </h5>
               
               <div className="prose prose-sm max-w-none text-gray-700">
@@ -276,21 +276,21 @@ export default function GitHubStyleSuggestion({
                 </p>
               </div>
 
-              {/* Mostrar código existente vs melhorado */}
+              {/* Show existing vs improved code */}
               {(codeSuggestion.existingCode || codeSuggestion.improvedCode) && (
                 <div className="mt-4 space-y-4">
                   <h6 className="text-sm font-medium text-gray-700 flex items-center">
                     <Code2 className="w-4 h-4 mr-2" />
-                    Mudanças propostas:
+                    Changes proposed:
                   </h6>
                   
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Código existente */}
+                    {/* Existing code */}
                     {codeSuggestion.existingCode && (
                       <div>
                         <div className="text-xs font-medium text-red-700 mb-2 flex items-center">
                           <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
-                          Código atual
+                          Current code
                         </div>
                         <CodeBlock
                           code={codeSuggestion.existingCode}
@@ -298,18 +298,18 @@ export default function GitHubStyleSuggestion({
                           fileName={codeSuggestion.relevantFile}
                           startLine={codeSuggestion.relevantLinesStart}
                           endLine={codeSuggestion.relevantLinesEnd}
-                          title="Código atual"
+                          title="Current code"
                           className="border-red-200"
                         />
                       </div>
                     )}
                     
-                    {/* Código melhorado */}
+                    {/* Improved code */}
                     {codeSuggestion.improvedCode && (
                       <div>
                         <div className="text-xs font-medium text-green-700 mb-2 flex items-center">
                           <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                          Código sugerido
+                          Suggested code
                         </div>
                         <CodeBlock
                           code={codeSuggestion.improvedCode}
@@ -317,26 +317,26 @@ export default function GitHubStyleSuggestion({
                           fileName={codeSuggestion.relevantFile}
                           startLine={codeSuggestion.relevantLinesStart}
                           endLine={codeSuggestion.relevantLinesEnd}
-                          title="Código melhorado"
+                          title="Suggested code"
                           className="border-green-200"
                         />
                       </div>
                     )}
                   </div>
                   
-                  {/* Diff unificado quando ambos existem */}
+                  {/* Diff unified when both exist */}
                   {codeSuggestion.existingCode && codeSuggestion.improvedCode && (
                     <div className="mt-4">
                       <div className="text-xs font-medium text-gray-700 mb-2 flex items-center">
                         <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                        Diff unificado
+                        Unified diff
                       </div>
                       <CodeBlock
                         code={createUnifiedDiff(codeSuggestion.existingCode, codeSuggestion.improvedCode)}
                         language={codeSuggestion.language}
                         fileName={codeSuggestion.relevantFile}
                         startLine={codeSuggestion.relevantLinesStart}
-                        title="Mudanças"
+                        title="Changes"
                         isDiff={true}
                         className="border-blue-200"
                       />
@@ -345,7 +345,7 @@ export default function GitHubStyleSuggestion({
                 </div>
               )}
 
-              {/* Fallback: extrair código do suggestionContent se não houver existingCode/improvedCode */}
+              {/* Fallback: extract code from suggestionContent if there's no existingCode/improvedCode */}
               {!codeSuggestion.existingCode && !codeSuggestion.improvedCode && (() => {
                 const codeBlocks = extractCodeFromSuggestion(codeSuggestion.suggestionContent);
                 const relevantCodeBlocks = codeBlocks.filter(block => 
@@ -357,7 +357,7 @@ export default function GitHubStyleSuggestion({
                     <div className="mt-4 space-y-3">
                       <h6 className="text-sm font-medium text-gray-700 flex items-center">
                         <Code2 className="w-4 h-4 mr-2" />
-                        Código extraído da descrição:
+                        Code extracted from description:
                       </h6>
                       {relevantCodeBlocks.map((block, blockIndex) => (
                         <CodeBlock
@@ -367,7 +367,7 @@ export default function GitHubStyleSuggestion({
                           fileName={codeSuggestion.relevantFile}
                           startLine={codeSuggestion.relevantLinesStart}
                           endLine={codeSuggestion.relevantLinesEnd}
-                          title={`Código ${blockIndex + 1}`}
+                          title={`Code ${blockIndex + 1}`}
                         />
                       ))}
                     </div>
@@ -389,25 +389,25 @@ export default function GitHubStyleSuggestion({
     
     return (
       <div className="space-y-4">
-        {/* Resumo das mudanças */}
+        {/* Changes summary */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
           <div className="flex items-center space-x-6 text-sm">
             <div className="flex items-center space-x-2">
               <FileText className="w-4 h-4 text-gray-600" />
-              <span className="font-medium text-gray-700">{filesAffected} arquivo{filesAffected !== 1 ? 's' : ''}</span>
+              <span className="font-medium text-gray-700">{filesAffected} file{filesAffected !== 1 ? 's' : ''}</span>
             </div>
             <div className="flex items-center space-x-2">
               <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              <span className="text-green-700">{additionsCount} adições</span>
+              <span className="text-green-700">{additionsCount} additions</span>
             </div>
             <div className="flex items-center space-x-2">
               <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-              <span className="text-red-700">{changesCount} modificações</span>
+              <span className="text-red-700">{changesCount} modifications</span>
             </div>
           </div>
         </div>
 
-        {/* Lista de arquivos com mudanças */}
+        {/* List of files with changes */}
         <div className="space-y-3">
           {suggestion.codeSuggestions.map((codeSuggestion, index) => {
             const hasExisting = !!codeSuggestion.existingCode;
@@ -425,7 +425,7 @@ export default function GitHubStyleSuggestion({
                     </span>
                     {(codeSuggestion.relevantLinesStart || codeSuggestion.relevantLinesEnd) && (
                       <span className="text-xs text-gray-500">
-                        @ linhas {codeSuggestion.relevantLinesStart || '?'}-{codeSuggestion.relevantLinesEnd || '?'}
+                        @ lines {codeSuggestion.relevantLinesStart || '?'}-{codeSuggestion.relevantLinesEnd || '?'}
                       </span>
                     )}
                   </div>
@@ -433,12 +433,12 @@ export default function GitHubStyleSuggestion({
                   <div className="flex items-center space-x-2">
                     {hasExisting && hasImproved && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        Modificado
+                        Modified
                       </span>
                     )}
                     {!hasExisting && hasImproved && (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Adicionado
+                        Added
                       </span>
                     )}
                   </div>
@@ -451,7 +451,7 @@ export default function GitHubStyleSuggestion({
                 {/* Mini diff visual */}
                 {hasExisting && hasImproved && (
                   <div className="bg-gray-50 rounded p-3">
-                    <div className="text-xs text-gray-600 mb-2">Preview das mudanças:</div>
+                    <div className="text-xs text-gray-600 mb-2">Preview of changes:</div>
                     <div className="font-mono text-xs space-y-1">
                       <div className="text-red-700 bg-red-50 px-2 py-1 rounded">
                         - {codeSuggestion.existingCode.split('\n')[0]}
@@ -472,8 +472,8 @@ export default function GitHubStyleSuggestion({
         {suggestion.codeSuggestions.every(s => !s.existingCode && !s.improvedCode) && (
           <div className="text-center py-8 text-gray-500">
             <GitCommit className="w-8 h-8 mx-auto mb-2" />
-            <p>Nenhuma mudança de código específica encontrada</p>
-            <p className="text-sm">Esta sugestão contém apenas descrições textuais</p>
+            <p>No specific code change found</p>
+            <p className="text-sm">This suggestion contains only textual descriptions</p>
           </div>
         )}
       </div>
@@ -488,7 +488,7 @@ export default function GitHubStyleSuggestion({
         : 'border-gray-200 hover:border-gray-300',
       className
     )}>
-      {/* Header principal */}
+      {/* Main header */}
       <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -507,7 +507,7 @@ export default function GitHubStyleSuggestion({
             
             <span className="text-gray-400">•</span>
             <span className="text-sm text-gray-600">
-              {suggestion.codeSuggestions.length} sugestõe{suggestion.codeSuggestions.length !== 1 ? 's' : ''}
+              {suggestion.codeSuggestions.length} suggestion{suggestion.codeSuggestions.length !== 1 ? 's' : ''}
             </span>
           </div>
 
@@ -522,21 +522,21 @@ export default function GitHubStyleSuggestion({
                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                 )}
               >
-                {isSelected ? 'Selecionado' : 'Selecionar'}
+                {isSelected ? 'Selected' : 'Select'}
               </button>
             )}
             
             {isSelected && !onSelect && (
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                 <Crown className="w-4 h-4 mr-1" />
-                Selecionado
+                Selected
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Conteúdo expandido */}
+      {/* Expanded content */}
       {isExpanded && (
         <div>
           {/* Tabs */}
@@ -551,7 +551,7 @@ export default function GitHubStyleSuggestion({
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 )}
               >
-                Visão Geral
+                Overview
               </button>
               <button
                 onClick={() => setActiveTab('changes')}
@@ -562,12 +562,12 @@ export default function GitHubStyleSuggestion({
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 )}
               >
-                Mudanças
+                Changes
               </button>
             </nav>
           </div>
 
-          {/* Conteúdo das tabs */}
+          {/* Tab content */}
           <div className="p-4">
             {activeTab === 'overview' && renderSuggestionOverview()}
             {activeTab === 'changes' && renderChangesView()}

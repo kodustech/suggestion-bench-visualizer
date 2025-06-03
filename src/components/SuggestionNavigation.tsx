@@ -23,17 +23,17 @@ export default function SuggestionNavigation({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <h2 className="text-xl font-semibold text-gray-900">
-            Revisar Sugestões de Código
+            Review Code Suggestions
           </h2>
           <div className="text-sm text-gray-500">
-            {feedbackCount} de {total} avaliadas
+            {feedbackCount} of {total} evaluated
           </div>
         </div>
 
         <div className="flex items-center space-x-4">
           {/* Progresso */}
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500">Progresso:</span>
+            <span className="text-sm text-gray-500">Progress:</span>
             <div className="w-32 bg-gray-200 rounded-full h-2">
               <div
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
@@ -56,7 +56,7 @@ export default function SuggestionNavigation({
                   ? 'text-gray-400 cursor-not-allowed'
                   : 'text-gray-700 hover:bg-gray-100'
               )}
-              title="Primeira sugestão"
+              title="First suggestion"
             >
               <SkipBack className="w-4 h-4" />
             </button>
@@ -70,7 +70,7 @@ export default function SuggestionNavigation({
                   ? 'text-gray-400 cursor-not-allowed'
                   : 'text-gray-700 hover:bg-gray-100'
               )}
-              title="Sugestão anterior"
+              title="Previous suggestion"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -88,7 +88,7 @@ export default function SuggestionNavigation({
                   ? 'text-gray-400 cursor-not-allowed'
                   : 'text-gray-700 hover:bg-gray-100'
               )}
-              title="Próxima sugestão"
+              title="Next suggestion"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -102,7 +102,7 @@ export default function SuggestionNavigation({
                   ? 'text-gray-400 cursor-not-allowed'
                   : 'text-gray-700 hover:bg-gray-100'
               )}
-              title="Última sugestão"
+              title="Last suggestion"
             >
               <SkipForward className="w-4 h-4" />
             </button>
