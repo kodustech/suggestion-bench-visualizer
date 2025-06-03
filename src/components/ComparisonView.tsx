@@ -59,6 +59,11 @@ export default function ComparisonView({
 
   // Preparar as opções para comparação
   const comparisonOptions: (ComparisonOutput & { id: string })[] = [];
+  console.log(`🔢 Iniciando comparação ${comparisonRow.id} com:`, {
+    temReference: !!comparisonRow.reference_outputs,
+    temMain: !!comparisonRow.outputs,
+    numAlternatives: comparisonRow.alternativeOutputs?.length || 0
+  });
   
   if (comparisonRow.reference_outputs) {
     const savedLabel = savedLabels['reference']; // Label global
@@ -86,6 +91,9 @@ export default function ComparisonView({
       });
     });
   }
+
+  console.log(`✅ Comparação ${comparisonRow.id} preparada com ${comparisonOptions.length} opções:`, 
+    comparisonOptions.map(o => `${o.id}: ${o.label}`).join(', '));
 
   const handleWinnerSelection = (winnerId: string, winnerLabel: string) => {
     setSelectedWinner(winnerId);
@@ -341,9 +349,20 @@ export default function ComparisonView({
       {/* Comparação das Opções */}
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Escolha a melhor sugestão:
-          </h3>
+          <div className="flex items-center space-x-3">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Escolha a melhor sugestão:
+            </h3>
+            <span className={clsx(
+              "inline-flex items-center px-3 py-1 rounded-full text-sm font-medium",
+              comparisonOptions.length > 6 ? "bg-orange-100 text-orange-800" :
+              comparisonOptions.length > 4 ? "bg-yellow-100 text-yellow-800" :
+              "bg-blue-100 text-blue-800"
+            )}>
+              {comparisonOptions.length} modelo{comparisonOptions.length !== 1 ? 's' : ''} em comparação
+              {comparisonOptions.length > 6 && " ⚠️"}
+            </span>
+          </div>
           <div className="flex items-center text-sm text-gray-500">
             <Edit2 className="w-4 h-4 mr-1" />
             <span>💡 Renomeie os modelos (ex: GPT-4, Claude) - vale para todas as comparações</span>
@@ -474,25 +493,62 @@ export default function ComparisonView({
         {/* Opções de resultado */}
         <div className="mt-6 pt-6 border-t border-gray-200">
           <h4 className="text-sm font-medium text-gray-700 mb-4">
-            {selectedWinner ? 'Alterar resultado:' : 'Resultado da comparação:'}
+            {selectedWinner ? 'Alterar resultado:' : 'Resultado da comparação:'} 
+            <span className="text-xs text-gray-500 ml-2">
+              ({comparisonOptions.length} modelo{comparisonOptions.length !== 1 ? 's' : ''} + empate/indefinido)
+            </span>
           </h4>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            {comparisonOptions.map((option) => (
+          
+          {comparisonOptions.length > 6 && (
+            <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-center space-x-2 text-sm text-orange-800">
+                <span>⚠️</span>
+                <span className="font-medium">Muitos modelos detectados!</span>
+                <span>O layout foi ajustado automaticamente para {comparisonOptions.length} opções.</span>
+              </div>
+            </div>
+          )}
+          <div className={`grid gap-3 mb-6 ${
+            comparisonOptions.length <= 2 ? 'grid-cols-2 lg:grid-cols-4' :
+            comparisonOptions.length <= 4 ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-5' :
+            comparisonOptions.length <= 6 ? 'grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' :
+            'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+          }`}>
+            {comparisonOptions.map((option, index) => (
               <button
                 key={option.id}
                 onClick={() => handleWinnerSelection(option.id, option.label || 'Sem Label')}
                 className={clsx(
-                  'flex flex-col items-center p-4 rounded-lg border-2 transition-all text-sm',
+                  'flex flex-col items-center p-3 rounded-lg border-2 transition-all text-sm relative',
                   selectedWinner === option.id
                     ? 'border-green-500 bg-green-50 text-green-800'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-700',
+                  comparisonOptions.length > 4 ? 'min-h-[80px]' : 'min-h-[100px]'
                 )}
               >
+                {/* Indicador de posição para muitos modelos */}
+                {comparisonOptions.length > 4 && (
+                  <div className="absolute top-1 left-2 text-xs text-gray-400 font-mono">
+                    #{index + 1}
+                  </div>
+                )}
+                
                 <Crown className={clsx(
-                  'w-5 h-5 mb-2',
-                  selectedWinner === option.id ? 'text-green-600' : 'text-gray-400'
+                  'mb-2',
+                  selectedWinner === option.id ? 'text-green-600' : 'text-gray-400',
+                  comparisonOptions.length > 6 ? 'w-4 h-4' : 'w-5 h-5'
                 )} />
-                <span className="font-medium">{option.label || 'Sem Label'}</span>
+                <span className={clsx(
+                  'font-medium text-center leading-tight',
+                  comparisonOptions.length > 6 ? 'text-xs' : 'text-sm'
+                )}>
+                  {option.label || 'Sem Label'}
+                </span>
+                
+                {/* Indicador de personalização */}
+                {savedLabels[option.id] && (
+                  <div className="absolute top-1 right-2 w-2 h-2 bg-blue-500 rounded-full" title="Nome personalizado"></div>
+                )}
               </button>
             ))}
             
